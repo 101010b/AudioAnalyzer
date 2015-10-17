@@ -14,11 +14,11 @@
    height="72"
    id="svg2"
    version="1.1"
-   inkscape:version="0.48.4 r9939"
-   inkscape:export-filename="C:\Users\aladin\AndroidStudioProjects\AudioAnalyzer\icon.png"
-   inkscape:export-xdpi="120"
-   inkscape:export-ydpi="120"
-   sodipodi:docname="New document 1">
+   inkscape:version="0.91 r13725"
+   inkscape:export-filename="d:\aladin\AndroidStudioProjects\AudioAnalyzer\icon_hires.png"
+   inkscape:export-xdpi="640"
+   inkscape:export-ydpi="640"
+   sodipodi:docname="icon.svg">
   <defs
      id="defs4">
     <linearGradient
@@ -56,7 +56,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="6.4621703"
-     inkscape:cx="23.940213"
+     inkscape:cx="-9.8719569"
      inkscape:cy="31.937711"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
@@ -74,7 +74,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>

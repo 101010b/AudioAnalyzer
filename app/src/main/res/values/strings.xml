@@ -4,4 +4,16 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
 
+    <string name="aboutText">
+        <b>10/17/2015 Thomas Buck</b>\n
+        https://55476f744974.wordpress.com/\n
+        \n
+        <b>This is an Open Source Project</b>\n
+        Source Code available at\n
+        https://github.com/101010b/AudioAnalyzer\n
+        \n
+        <b>Used Libraries:</b>\n
+        Uses KISS FFT for FFT processing - see http://kissfft.sourceforge.net/ for details.
+    </string>
+
 </resources>

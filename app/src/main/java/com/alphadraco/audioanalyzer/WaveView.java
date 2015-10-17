@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.support.v7.internal.view.menu.MenuBuilder;
 import android.util.AttributeSet;
 import android.view.Menu;
@@ -28,6 +29,7 @@ public class WaveView extends View {
     private DataConsolidator dataConsolidator;
     private int scale;
     private float fontyofs;
+    private int xofs;
 
 
     public void setPreferences(SharedPreferences prefs) {
@@ -120,9 +122,15 @@ public class WaveView extends View {
         PrefListener=null;
         paint_text=new Paint();
         paint_text.setColor(Color.WHITE);
-        paint_text.setTextAlign(Paint.Align.LEFT);
+        paint_text.setTextAlign(Paint.Align.RIGHT);
         paint_text.setTextSize(stdsize * 0.75f);
+        paint_text.setStyle(Paint.Style.STROKE);
         fontyofs=stdsize*0.75f;
+
+        Rect rct=new Rect();
+        String Sw="-0.0000";
+        paint_text.getTextBounds(Sw, 0, Sw.length(), rct);
+        xofs=rct.width()+rct.height()/10;
     }
 
     public WaveView(Context context) {
@@ -144,25 +152,28 @@ public class WaveView extends View {
 
         if (helper.sharedMap == null) {
             // Initialize
-            helper.WaveViewInit(width,height);
+            helper.WaveViewInit(width-2-xofs,height-2);
             if (helper.sharedMap == null)
                 return;
         }
 
         helper.WaverViewProcess(dataConsolidator.wave, scale);
 
-        canvas.drawBitmap(helper.sharedMap, 0, 0, null);
-        canvas.drawLine(0, 0, 20f, 0, paint_text);
-        canvas.drawLine(width-20f, 0, width-1f, 0, paint_text);
+        canvas.drawBitmap(helper.sharedMap, xofs + 1, 1, null);
+        canvas.drawRect(xofs, 0, width - 1, height - 1, paint_text);
 
-        canvas.drawLine(0, height / 2, 20f, height / 2, paint_text);
-        canvas.drawLine(width-20f, height / 2, width-1f, height / 2, paint_text);
 
-        canvas.drawLine(0,height-1,20f,height-1,paint_text);
-        canvas.drawLine(width-20f,height-1,width-1f,height-1,paint_text);
+        //canvas.drawLine(0, 0, 20f, 0, paint_text);
+        //canvas.drawLine(width-20f, 0, width-1f, 0, paint_text);
 
-        canvas.drawText(String.format("%1.3f", 1.0f / (float) scale), 20f, fontyofs, paint_text);
-        canvas.drawText(String.format("%1.3f",-1.0f/(float)scale),20f,height-1,paint_text);
+        //canvas.drawLine(0, height / 2, 20f, height / 2, paint_text);
+        //canvas.drawLine(width-20f, height / 2, width-1f, height / 2, paint_text);
+
+        //canvas.drawLine(0,height-1,20f,height-1,paint_text);
+        //canvas.drawLine(width-20f,height-1,width-1f,height-1,paint_text);
+
+        canvas.drawText(String.format("%1.3f", 1.0f / (float) scale), xofs-5, fontyofs, paint_text);
+        canvas.drawText(String.format("%1.3f",-1.0f/(float)scale),xofs-5,height-1,paint_text);
     }
 
     public void display(DataConsolidator dc) {

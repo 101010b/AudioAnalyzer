@@ -1,5 +1,7 @@
 package com.alphadraco.audioanalyzer;
 
+import android.graphics.Bitmap;
+
 /**
  * Created by aladin on 16.10.2015.
  */
@@ -7,11 +9,22 @@ public class ColorTable {
 
     public String id;
     public int[] table;
+    public Bitmap bar;
 
     public ColorTable(int n, String s) {
         table = new int[n];
+        bar=null;
         id="";
         build(s);
+    }
+
+    public void buildBar() {
+        if ((table == null) || (table.length < 1)) {
+            bar=null;
+            return;
+        }
+        bar=Bitmap.createBitmap(table.length,1, Bitmap.Config.ARGB_8888);
+        bar.setPixels(table,0,table.length,0,0,table.length,1);
     }
 
     private boolean getcolor(char c, float[] col)
@@ -93,6 +106,7 @@ public class ColorTable {
         for (int i = 0; i < table.length; i++)
             table[i]=0;
         id="";
+        bar=null;
     }
 
     private int to_int(float f) {
@@ -121,6 +135,7 @@ public class ColorTable {
         for (int i = 0; i < table.length; i++)
             table[i]=icol;
         id="" + c;
+        buildBar();
     }
 
     private void build(String s)
@@ -193,6 +208,7 @@ public class ColorTable {
 
         build(rx, cr, cg, cb);
         id = s;
+        buildBar();
     }
 
     private void build(float[] rx, float[] cr, float[] cg, float[] cb)

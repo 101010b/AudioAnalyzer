@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.support.annotation.DimenRes;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -202,7 +203,7 @@ public class LevelBar  extends View {
 
     private void showLevelMenu() {
         if (dataConsolidator == null) return;
-        PopupMenu P = new PopupMenu(getContext(),this);
+        PopupMenu P = new PopupMenu(getContext(),this, Gravity.RIGHT);
         Menu menu = P.getMenu();
         menu.add(0,1,Menu.NONE,"RMS, Current");
         menu.add(0,2,Menu.NONE,"RMS, Average");
@@ -287,6 +288,18 @@ public class LevelBar  extends View {
         return String.format("%1.0fMHz",f/1000000.0f);
     }
 
+    public void drawCornerRect(Canvas canvas, int left, int top, int right, int bottom, Paint p) {
+        int rw=10;
+        canvas.drawLine(left,top+rw,left,top,p);
+        canvas.drawLine(left,top,left+rw,top,p);
+        canvas.drawLine(right-rw,top,right,top,p);
+        canvas.drawLine(right,top,right,top+rw,p);
+        canvas.drawLine(right,bottom-rw,right,bottom,p);
+        canvas.drawLine(right,bottom,right-rw,bottom,p);
+        canvas.drawLine(left+rw,bottom,left,bottom,p);
+        canvas.drawLine(left,bottom,left,bottom-rw,p);
+    }
+
     @Override
     public void onDraw(Canvas canvas) {
         int width=canvas.getWidth();
@@ -303,11 +316,17 @@ public class LevelBar  extends View {
                 canvas.drawText(s, 10, height / 2.0f + fontHeight / 2.0f, paint_levels);
             } else
                 canvas.drawText(powerTrack.name, 10, height / 2.0f + fontHeight / 2.0f, paint_levels);
+            if (!fixedmode) {
+                drawCornerRect(canvas, 1, 5, (int)frontSpace - 1, height - 5, paint_levels_frame);
+                // canvas.drawRect(1, 5, frontSpace - 1, height - 5, paint_levels_frame);
+            }
+
+            /*
             if (fixedmode)
                 canvas.drawRoundRect(1,5,frontSpace-1,height-5,10,10,paint_levels_fixed_frame);
             else
                 canvas.drawRoundRect(1,5,frontSpace-1,height-5,10,10,paint_levels_frame);
-
+            */
             // canvas.drawRoundRect(0,height/2-fontHeight/2-5,frontSpace-1,height/2+fontHeight/2+5,10,10,paint_levels_frame);
         }
 
@@ -492,6 +511,8 @@ public class LevelBar  extends View {
             canvas.drawText(value,width-hintWidth-1,height/2.0f+fontHeight/2.0f,paint_text_current);
             canvas.drawText(unit,width-hintWidth+1,height/2.0f,paint_text_unit);
             canvas.drawText(hint,width-hintWidth+1,height/2.0f+fontHeight/2.0f,paint_text_hint);
+            drawCornerRect(canvas, width - (int) backSpace, 5, width - 1, height - 5, paint_levels_frame);
+
         }
     }
 

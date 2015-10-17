@@ -61,7 +61,7 @@ public class AudioAnalyzerHelper {
     boolean fftProcess() {
         if (!initialized) return false;
         boolean rval=fftProcessorProcess();
-        if ((specMap != null) && rval) {
+        if ((specMap != null) && (specMapBuffer != null) && rval) {
             WaterfallProcessData(specMapBuffer,specMapWidth,specMapHeight,specColorTable,specColorTable.length);
             specMap.setPixels(specMapBuffer, 0, specMapWidth, 0, 0, specMapWidth, specMapHeight);
         }
