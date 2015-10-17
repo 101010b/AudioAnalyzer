@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools" tools:context=".AudioAnalyzer">
+    <item android:id="@+id/action_settings" android:title="Settings"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_about" android:title="About"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_quit" android:title="Quit"
+        android:orderInCategory="101" app:showAsAction="never" />
+</menu>

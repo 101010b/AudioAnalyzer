@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="96"
+   height="96"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   inkscape:export-filename="D:\aladin\AndroidStudioProjects\AudioAnalyzer\cal_button.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   sodipodi:docname="cal_button.svg">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4696">
+      <stop
+         style="stop-color:#00ff34;stop-opacity:1;"
+         offset="0"
+         id="stop4698" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="1"
+         id="stop4700" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4696"
+       id="radialGradient4702"
+       cx="47.603439"
+       cy="1005.3901"
+       fx="47.603439"
+       fy="1005.3901"
+       r="49.560608"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.959798"
+     inkscape:cx="2.7921309"
+     inkscape:cy="74.259216"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1896"
+     inkscape:window-height="1205"
+     inkscape:window-x="307"
+     inkscape:window-y="62"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-956.36218)">
+    <rect
+       style="fill:url(#radialGradient4702);fill-opacity:1;stroke:none"
+       id="rect4031"
+       width="99.121216"
+       height="99.121216"
+       x="-1.9571693"
+       y="955.82947" />
+    <path
+       style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 43.016541,976.09566 -22.560785,5.55602 -5.050921,5.556 23.486787,0 0,-1.01017 8.502385,0.25254 -0.08418,2.94637 -0.757638,-0.0842 0.08418,15.91038 -7.323838,0.1684 0,-0.6735 -24.160243,0.2526 4.461649,5.4718 23.065876,6.2294 0.336728,18.6885 -2.188732,3.1989 -0.841821,2.778 0,3.1147 1.26273,2.4414 0.926002,0.5892 4.209102,0 0.08418,7.1555 12.879851,-0.084 0,-6.8187 3.619828,-0.1683 0,-19.6145 0.841821,0 0,2.0204 3.283098,-0.2525 0.08418,-5.8928 -3.198918,0.084 0,2.5254 -1.26273,0.084 -0.252546,-26.6015 5.303468,0 -0.02315,0.7455 7.440712,0 -1.130988,-2.02386 -9.94079,-3.63107 -4.762055,-0.0596 0.05952,-5.83351 -0.714308,-0.23811 0.05952,-1.90482 5.654939,0 8.214546,-2.50007 2.797705,-2.97628 -8.155017,0 0,0.89287 -4.762056,-0.17857 0.05952,-6.07162 z"
+       id="path4162"
+       inkscape:connector-curvature="0" />
+  </g>
+</svg>

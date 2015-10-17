@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="FFT Processing"
+        android:key="AudioAnalyzerFFTSettings">
+        <ListPreference android:title="FFT Size" android:key="FFTSize"
+            android:dialogTitle="FFT Size"
+            android:entries="@array/pref_fft_size_entries"
+            android:entryValues="@array/pref_fft_size_entry_values"
+            android:defaultValue="512"
+            android:summary="%s samples">
+        </ListPreference>
+        <ListPreference android:title="Window" android:key="FFTWindow"
+            android:dialogTitle="FFT Window"
+            android:entries="@array/pref_fft_window_entries"
+            android:entryValues="@array/pref_fft_window_entry_values"
+            android:defaultValue="2"
+            android:summary="%s Window Function">
+        </ListPreference>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Spectrum Display">
+        <CheckBoxPreference android:title="Logarithmic Frequency"
+            android:defaultValue="true"
+            android:key="SpecDisplayLog">
+        </CheckBoxPreference>
+        <CheckBoxPreference android:title="Display Average"
+            android:defaultValue="true"
+            android:key="SpecDisplayAvg">
+        </CheckBoxPreference>
+        <CheckBoxPreference android:title="Display Peak"
+            android:defaultValue="true"
+            android:key="SpecDisplayPeak">
+        </CheckBoxPreference>
+        <ListPreference android:title="Waterfall ColorScheme" android:key="WaterFallColor"
+            android:dialogTitle="Waterfall ColorScheme"
+            android:entries="@array/pref_waterfall_colorscheme"
+            android:entryValues="@array/pref_waterfall_colorscheme"
+            android:defaultValue="KrYW"
+            android:summary="Scheme = %s">
+        </ListPreference>
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Calibration External Mic">
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="10"
+            android:dialogTitle="Reference Voltage"
+            android:inputType="numberDecimal"
+            android:key="CalMicIn_V"
+            android:summary="Reference Voltage %s mV (rms)"
+            android:title="Reference Voltage" />
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="-6"
+            android:dialogTitle="Reference Level"
+            android:inputType="numberDecimal"
+            android:key="CalMicIn_S"
+            android:summary="Reference Level %s dBFS"
+            android:title="Reference Level" />
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="-38"
+            android:dialogTitle="External Mic Sensitivity"
+            android:inputType="numberDecimal"
+            android:key="CalMicIn_MO"
+            android:summary="Microphone Sensitivity %s dBV/Pa"
+            android:title="External Mic Sensitivity" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Calibration Internal Mic">
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="94"
+            android:dialogTitle="Reference Tone"
+            android:inputType="numberDecimal"
+            android:key="CalMic_P"
+            android:summary="Tone Level %s dBSPL"
+            android:title="Reference Tone" />
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="-10"
+            android:dialogTitle="Reference Level"
+            android:inputType="numberDecimal"
+            android:key="CalMic_S"
+            android:summary="Reference Level %s dBFS"
+            android:title="Reference Level" />
+    </PreferenceCategory>
+</PreferenceScreen>

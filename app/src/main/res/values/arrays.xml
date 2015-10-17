@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="pref_fft_size_entries">
+        <item>128</item>
+        <item>256</item>
+        <item>512</item>
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
+        <item>8192</item>
+    </string-array>
+    <string-array name="pref_fft_size_entry_values">
+        <item>128</item>
+        <item>256</item>
+        <item>512</item>
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
+        <item>8192</item>
+    </string-array>
+    <string-array name="pref_fft_window_entries">
+        <item>Rectangular</item>
+        <item>Hann</item>
+        <item>Hamming</item>
+        <item>Blackman</item>
+    </string-array>
+    <string-array name="pref_fft_window_entry_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+    <string-array name="pref_waterfall_colorscheme">
+        <item>KrYW</item>
+        <item>KbBW</item>
+        <item>KrgBW</item>
+        <item>KW</item>
+        <item>KmryGCBW</item>
+    </string-array>
+</resources>
