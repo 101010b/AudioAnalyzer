@@ -29,8 +29,10 @@ FftProcessor::FftProcessor() {
 
     K1=NULL;
     AFILTER=NULL;
+    BFILTER=NULL;
+    CFILTER=NULL;
 
-    FRES=(float*)malloc(12*sizeof(float));
+    FRES=(float*)malloc(20*sizeof(float));
     pkval=1e-6;
     resetpeak=false;
 
@@ -62,6 +64,32 @@ FftProcessor::~FftProcessor() {
 
     if (K1) free(K1);
     if (AFILTER) free(AFILTER);
+    if (BFILTER) free(BFILTER);
+    if (CFILTER) free(CFILTER);
+}
+
+float FftProcessor::filter_A_dB(float f)
+{
+    if (f <= 0) return -999.0f;
+    float ra = 12200.0f * 12200.0f * f * f * f * f /
+                ((f * f + 20.6f * 20.6f) * (float)sqrt((f * f + 107.7f * 107.7f) * (f * f + 737.9f * 737.9f)) * (f * f + 12200.0f * 12200.0f));
+    return 2.0f + 20.0f * (float)log10(ra);
+}
+
+float FftProcessor::filter_B_dB(float f)
+{
+    if (f <= 0) return -999.0f;
+    float rb = 12200.0f * 12200.0f * f * f * f /
+                ((f * f + 20.6f * 20.6f) * (float)sqrt(f * f + 158.2f * 158.2f) * (f * f + 12200.0f * 12200.0f));
+    return 0.17f + 20.0f * (float)log10(rb);
+}
+
+float FftProcessor::filter_C_dB(float f)
+{
+    if (f <= 0) return -999.0f;
+    float rc = 12200.0f * 12200.0f * f * f /
+                ((f * f + 20.6f * 20.6f) * (f * f + 12200.0f * 12200.0f));
+    return 0.06f + 20.0f * (float)log10(rc);
 }
 
 void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,float fmin, float fmax,int pixels,
@@ -88,6 +116,8 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
         if (kiss_cfg) free(kiss_cfg);kiss_cfg=NULL;
         if (K1) free(K1);K1=NULL;
         if (AFILTER) free(AFILTER);AFILTER=NULL;
+        if (BFILTER) free(BFILTER);BFILTER=NULL;
+        if (CFILTER) free(CFILTER);CFILTER=NULL;
         if (ENG) free(ENG);ENG=NULL;
 
         WAVE=(float*)malloc(sizeof(float)*len);
@@ -101,6 +131,8 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
         WINDOW=(float*)malloc(sizeof(float)*len);
         K1=(float*)malloc(sizeof(float)*len/2);
         AFILTER=(float*)malloc(sizeof(float)*len/2);
+        BFILTER=(float*)malloc(sizeof(float)*len/2);
+        CFILTER=(float*)malloc(sizeof(float)*len/2);
         ENG=(float*)malloc(sizeof(float)*len/2);
         LEN=len;
         newsetup=true;
@@ -109,7 +141,7 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
         kiss_cfg=kiss_fftr_alloc(LEN,0,0,0);
     }
     if (recalcwin) {
-        float alpha,beta,a0,a1,a2;
+        float alpha,beta,a0,a1,a2,a3,a4;
         window = usewin;
         switch (window) {
             case 0: // Rectangular
@@ -142,6 +174,56 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
                                         a2 * cos(4.0 * M_PI * (float) i / (LEN - 1)));
                 amplitude_win_scaling=(float)20.0f*log10(1/0.42);
                 noise_win_scaling=(float)20.0f*log10(1/0.42*1/1.73)-0.4;
+                break;
+            case 4: // Blackman-Harris
+                a0=0.35875;
+                a1=0.48829;
+                a2=0.14128;
+                a3=0.01168;
+                for (int i = 0; i < LEN; i++)
+                    WINDOW[i] = (float)(a0
+                                        - a1 * cos(2.0 * M_PI * (float) i / (LEN - 1))
+                                        + a2 * cos(4.0 * M_PI * (float) i / (LEN - 1))
+                                        - a3 * cos(6.0 * M_PI * (float) i / (LEN - 1))
+                    );
+                amplitude_win_scaling=12.0f-3.0f;
+                noise_win_scaling=5.9f-2.8f;
+                break;
+            case 5: // Blackman-Nuttall
+                a0=0.3635819;
+                a1=0.4891775;
+                a2=0.1365995;
+                a3=0.0106411;
+                for (int i = 0; i < LEN; i++)
+                    WINDOW[i] = (float)(a0
+                                        - a1 * cos(2.0 * M_PI * (float) i / (LEN - 1))
+                                        + a2 * cos(4.0 * M_PI * (float) i / (LEN - 1))
+                                        - a3 * cos(6.0 * M_PI * (float) i / (LEN - 1))
+                    );
+                amplitude_win_scaling=12.0f-3.0f;
+                noise_win_scaling=5.9f-2.8f;
+                break;
+            case 6: // Flat-Top
+                a0=1.0;
+                a1=1.93;
+                a2=1.29;
+                a3=0.388;
+                a4=0.028;
+                for (int i = 0; i < LEN; i++)
+                    WINDOW[i] = (float)(a0
+                                        - a1 * cos(2.0 * M_PI * (float) i / (LEN - 1))
+                                        + a2 * cos(4.0 * M_PI * (float) i / (LEN - 1))
+                                        - a3 * cos(6.0 * M_PI * (float) i / (LEN - 1))
+                                        + a4 * cos(8.0 * M_PI * (float) i / (LEN - 1))
+                    );
+                amplitude_win_scaling=0.0f;
+                noise_win_scaling=-0.5f+6.0f;
+                break;
+            case 7: // Bartlett
+                for (int i = 0; i < LEN; i++)
+                    WINDOW[i] = (float)(2.0f/(LEN-1.0f)*((LEN-1.0f)/2.0f-fabsf(i-(LEN-1.0f)/2.0f)));
+                amplitude_win_scaling=7.0f;
+                noise_win_scaling=-3.0+5.2f;
                 break;
         }
     }
@@ -180,8 +262,18 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
             else K1[i]=0.0;
 
             // A-Filter
-            float RA=(float)(12200.0*12200.0*f*f*f*f/((f*f+20.6*20.6)*(f*f+12200.0*12200.0)*sqrt(f*f+107.7*107.7)*sqrt(f*f+737.9*737.9))*1.258925412);
-            AFILTER[i]=RA*RA;
+            float RA=pow(10.0f,filter_A_dB(f)/10.0f);
+            float RB=pow(10.0f,filter_B_dB(f)/10.0f);
+            float RC=pow(10.0f,filter_C_dB(f)/10.0f);
+            // float RA=(float)(12200.0*12200.0*f*f*f*f/((f*f+20.6*20.6)*(f*f+12200.0*12200.0)*sqrt(f*f+107.7*107.7)*sqrt(f*f+737.9*737.9))*1.258925412);
+            // float RA=(float)(12200.0*12200.0*f*f*f*f/((f*f+20.6*20.6)*(f*f+12200.0*12200.0)*sqrt(f*f+107.7*107.7)*sqrt(f*f+737.9*737.9))*1.258925412);
+
+            //AFILTER[i]=RA*RA;
+            //BFILTER[i]=RB*RB;
+            //CFILTER[i]=RC*RC;
+            AFILTER[i]=RA;
+            BFILTER[i]=RB;
+            CFILTER[i]=RC;
         }
         newscale=true;
     }
@@ -279,9 +371,19 @@ bool FftProcessor::process() {
     float sumflat10k=0.0;
     float sumflat20k=0.0;
     float sum1k=0.0;
+
     float sumA10_100=0.0;
     float sumA100_10k=0.0;
     float sumA10k_20k=0.0;
+
+    float sumB10_100=0.0;
+    float sumB100_10k=0.0;
+    float sumB10k_20k=0.0;
+
+    float sumC10_100=0.0;
+    float sumC100_10k=0.0;
+    float sumC10k_20k=0.0;
+
     float scalef=(float)pow(10.0,amplitude_win_scaling/10.0)*2.0f/(float)(LEN*LEN);
     float tc=0.05; // exp(-LEN/128.0f*FS/44100.0f)*0.05;
     float sumtrack=0.0;
@@ -306,10 +408,22 @@ bool FftProcessor::process() {
         }
         ENG[i]=eng;
         sum1k+=K1[i]*eng;
-        if (F[i] < 10) sumA10_100=sumA100_10k;
+
+        if (F[i] < 10) { }
         else if (F[i] < 100) sumA10_100+=AFILTER[i]*eng;
         else if (F[i] < 10000) sumA100_10k+=AFILTER[i]*eng;
         else if (F[i] < 20000) sumA10k_20k+=AFILTER[i]*eng;
+
+        if (F[i] < 10) { }
+        else if (F[i] < 100) sumB10_100+=BFILTER[i]*eng;
+        else if (F[i] < 10000) sumB100_10k+=BFILTER[i]*eng;
+        else if (F[i] < 20000) sumB10k_20k+=BFILTER[i]*eng;
+
+        if (F[i] < 10) { }
+        else if (F[i] < 100) sumC10_100+=CFILTER[i]*eng;
+        else if (F[i] < 10000) sumC100_10k+=CFILTER[i]*eng;
+        else if (F[i] < 20000) sumC10k_20k+=CFILTER[i]*eng;
+
         if (trackint0 == i) sumtrack+=eng;
         if (trackint1 == i) sumtrack+=eng;
         if (trackint2 == i) sumtrack+=eng;
@@ -355,6 +469,16 @@ bool FftProcessor::process() {
         FRES[11]=(float)10.0*log10(sumtrack)-noise_win_scaling;
     else
         FRES[11]=-120.0f;
+    FRES[12]=(float)10.0*log10(sumB10_100+sumB100_10k+sumB10k_20k)-noise_win_scaling;
+    FRES[13]=(float)10.0*log10(sumB10_100+sumB100_10k)-noise_win_scaling;
+    FRES[14]=(float)10.0*log10(sumB100_10k)-noise_win_scaling;
+    FRES[15]=(float)10.0*log10(sumB100_10k+sumB10k_20k)-noise_win_scaling;
+
+    FRES[16]=(float)10.0*log10(sumC10_100+sumC100_10k+sumC10k_20k)-noise_win_scaling;
+    FRES[17]=(float)10.0*log10(sumC10_100+sumC100_10k)-noise_win_scaling;
+    FRES[18]=(float)10.0*log10(sumC100_10k)-noise_win_scaling;
+    FRES[19]=(float)10.0*log10(sumC100_10k+sumC10k_20k)-noise_win_scaling;
+
     return true;
 }
 
@@ -419,7 +543,7 @@ jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGe
             env->SetFloatArrayRegion(result,0,fftProcessor->LEN/2,fftProcessor->Y);
             break;
         case 2: // integrated values
-            env->SetFloatArrayRegion(result,0,12,fftProcessor->FRES);
+            env->SetFloatArrayRegion(result,0,20,fftProcessor->FRES);
             break;
         case 3: // Average Spectrum
             env->SetFloatArrayRegion(result,0,fftProcessor->LEN/2,fftProcessor->YY);

@@ -11,9 +11,13 @@ import android.graphics.Rect;
 import android.provider.ContactsContract;
 import android.support.annotation.DimenRes;
 import android.util.AttributeSet;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.PopupMenu;
 
 /**
  * Created by aladin on 19.09.2015.
@@ -25,6 +29,9 @@ public class SpectralView  extends View {
     Paint paint_fft = new Paint();
     Paint paint_avg = new Paint();
     Paint paint_max = new Paint();
+    Paint paint_fft_mark = new Paint();
+    Paint paint_avg_mark = new Paint();
+    Paint paint_max_mark = new Paint();
     Paint paint_frame = new Paint();
     Paint paint_note = new Paint();
     Paint paint_colorBarFrame = new Paint();
@@ -82,6 +89,7 @@ public class SpectralView  extends View {
 
 
     boolean displaywaterfall;
+    String[] colorTabStrings;
     String colorTabString;
     ColorTable colorTable;
 
@@ -108,7 +116,7 @@ public class SpectralView  extends View {
             showPeak = SpectralPrefs.getBoolean("SpecDisplayPeak", true);
             showFFT = SpectralPrefs.getBoolean("SpecDisplayFFT", true);
             trackf = SpectralPrefs.getFloat("TrackF", -1.0f);
-            colorTabString = SpectralPrefs.getString("WaterFallColor", "KrYW");
+            colorTabString = SpectralPrefs.getString("WaterFallColor", colorTabStrings[0]);
             displaywaterfall=SpectralPrefs.getBoolean("DisplayWaterfall",false);
             PrefListener=new SharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
@@ -167,13 +175,20 @@ public class SpectralView  extends View {
         // paint_subgrid.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
 
 
-        paint_fft.setColor(Color.GREEN);paint_fft.setStyle(Paint.Style.STROKE);paint_fft.setPathEffect(null);
+        paint_fft.setColor(Color.GREEN);paint_fft.setStyle(Paint.Style.STROKE);
         paint_fft.setTextAlign(Paint.Align.CENTER);
-        paint_avg.setColor(Color.GRAY);paint_avg.setStyle(Paint.Style.STROKE);paint_avg.setPathEffect(null);
+        paint_avg.setColor(Color.GRAY);paint_avg.setStyle(Paint.Style.STROKE);
         paint_avg.setTextAlign(Paint.Align.CENTER);
-        paint_max.setColor(Color.RED);paint_max.setStyle(Paint.Style.STROKE);paint_max.setPathEffect(null);
+        paint_max.setColor(Color.RED);paint_max.setStyle(Paint.Style.STROKE);
         paint_max.setTextAlign(Paint.Align.CENTER);
-        // paint_max.setStrokeWidth(3);
+
+        paint_fft_mark.setColor(Color.GREEN);paint_fft_mark.setStyle(Paint.Style.STROKE);
+        paint_fft_mark.setTextSize(stdsize*0.75f);paint_fft_mark.setTextAlign(Paint.Align.LEFT);
+        paint_avg_mark.setColor(Color.GRAY);paint_avg_mark.setStyle(Paint.Style.STROKE);
+        paint_avg_mark.setTextSize(stdsize*0.75f);paint_avg_mark.setTextAlign(Paint.Align.LEFT);
+        paint_max_mark.setColor(Color.RED);paint_max_mark.setStyle(Paint.Style.STROKE);
+        paint_max_mark.setTextSize(stdsize*0.75f);paint_max_mark.setTextAlign(Paint.Align.LEFT);
+
 
         textY.setColor(Color.GRAY);
         textY.setTextAlign(Paint.Align.RIGHT);
@@ -206,15 +221,15 @@ public class SpectralView  extends View {
         paint_frame.getTextBounds("dBSPL", 0, 5, rct);
         unitrect=new Rect(rct);
 
-
         unitrect.offset((int) xofs, 5 + rct.height());
-        paint_max.getTextBounds("MAX", 0, 3, rct);
-        buttonHeight=rct.height()*2;
+        paint_max.getTextBounds("_MAX_", 0, 5, rct);
+        buttonHeight=rct.height()*3;
         buttonFontHeight=rct.height();
         maxrect=new Rect(rct);
         maxrect.offset(0, 5 + rct.height());
 
-        colorTabString="KrYW";
+        colorTabStrings=getResources().getStringArray(R.array.pref_waterfall_colorscheme);
+        colorTabString=colorTabStrings[0];
         colorTable=new ColorTable(256,colorTabString);
 
         fmin=100;
@@ -254,6 +269,23 @@ public class SpectralView  extends View {
         setup(context);
     }
 
+    public void drawCornerRect(Canvas canvas, int left, int top, int right, int bottom, Paint p) {
+        int rw=10;
+        float[] pts=
+                {
+                        left,top+rw,left,top,
+                        left,top,left+rw,top,
+                        right-rw,top,right,top,
+                        right,top,right,top+rw,
+                        right,bottom-rw,right,bottom,
+                        right,bottom,right-rw,bottom,
+                        left+rw,bottom,left,bottom,
+                        left,bottom,left,bottom-rw,
+                };
+
+        canvas.drawLines(pts, 0, pts.length, p);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent e) {
 
@@ -273,7 +305,12 @@ public class SpectralView  extends View {
                 // First down
                 PT0X = e.getX(0);
                 PT0Y = e.getY(0);
-                if (!displaywaterfall) {
+                if (displaywaterfall) {
+                    if (PT0Y < levelBarHeight) {
+                        showColorMenu();
+                        return true;
+                    }
+                } else {
                     if (PT0X > getWidth()-maxrect.width()) {
                         if (PT0Y < 5 + buttonHeight) {
                             showPeak = !showPeak;
@@ -466,6 +503,10 @@ public class SpectralView  extends View {
         return String.format("%1.0fMHz",f/1000000.0f);
     }
 
+    public String getdBstringx(float db) {
+        return String.format("%1.1f",db);
+    }
+
     public String getdBstring(float db) {
         return String.format("%1.0f",db);
     }
@@ -481,6 +522,30 @@ public class SpectralView  extends View {
         islog=newmode;
     }
 
+    private void showColorMenu() {
+        if (!displaywaterfall) return;
+        if (dataConsolidator==null) return;
+        PopupMenu P = new PopupMenu(getContext(),this,Gravity.LEFT+Gravity.FILL_VERTICAL+Gravity.BOTTOM);
+        Menu menu = P.getMenu();
+        for (int i=0;i<colorTabStrings.length;i++) {
+            menu.add(0,i+1,Menu.NONE,colorTabStrings[i]);
+        }
+        P.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                int id = item.getItemId();
+                if (id < 1) return false;
+                id--;
+                if (id >= colorTabStrings.length) return false;
+                colorTabString=colorTabStrings[id];
+                SharedPreferences.Editor e = SpectralPrefs.edit();
+                e.putString("WaterFallColor", colorTabString);
+                e.apply();
+                return false;
+            }
+        });
+        P.show();
+    }
 
     public void drawFreqGrid(Canvas canvas, int hofs, int vofs, int width, int height, float fmin, float fmax, boolean islog) {
 
@@ -550,7 +615,7 @@ public class SpectralView  extends View {
 
     public void drawGridWaterfall(Canvas canvas, int hofs, int vofs, int width, int height) {
 
-        drawFreqGrid(canvas,hofs,vofs,width,height,fmin,fmax,islog);
+        drawFreqGrid(canvas, hofs, vofs, width, height, fmin, fmax, islog);
 
         float tmax=(height - 1)/2*dataConsolidator.len/dataConsolidator.fs;
         int step=1;
@@ -564,14 +629,14 @@ public class SpectralView  extends View {
             float Y=vofs+height-1-(float)i/tmax*(height-1);
             canvas.drawLine(hofs, Y, hofs + width - 1, Y, paint_grid);
             if ((Y > fctr) && (Y < height - 1 - fctr))
-                canvas.drawText(String.format("%d",i), hofs- fontspace, Y + fctr / 2, textY);
+                canvas.drawText(String.format("%d", i), hofs- fontspace, Y + fctr / 2, textY);
         }
 
     }
 
     public void drawGridSpectrum(Canvas canvas, int hofs, int vofs, int width, int height) {
 
-        drawFreqGrid(canvas,hofs,vofs,width,height,fmin,fmax,islog);
+        drawFreqGrid(canvas, hofs, vofs, width, height, fmin, fmax, islog);
 
         float lminX = lmin + ofs;
         float lmaxX = lmax + ofs;
@@ -638,11 +703,15 @@ public class SpectralView  extends View {
 
             canvas.drawText("MAX", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2,paint_max);
             canvas.drawText("AVG", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2+buttonHeight,paint_avg);
-            canvas.drawText("FFT", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2+2*buttonHeight,paint_fft);
+            canvas.drawText("FFT", width - 5 - (maxrect.width() + 15) / 2, 5 + buttonHeight / 2 + buttonFontHeight / 2 + 2 * buttonHeight, paint_fft);
 
-            canvas.drawRect(width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
-            canvas.drawRect(width - maxrect.width() - 20, 5+2+buttonHeight, width - 5, 5+buttonHeight-2+buttonHeight, paint_avg);
-            canvas.drawRect(width - maxrect.width() - 20, 5+2+2*buttonHeight, width - 5, 5+buttonHeight-2+2*buttonHeight, paint_fft);
+            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
+            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + buttonHeight, width - 5, 5 + buttonHeight - 2 + buttonHeight, paint_avg);
+            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + 2 * buttonHeight, width - 5, 5 + buttonHeight - 2 + 2 * buttonHeight, paint_fft);
+
+            //canvas.drawRect(width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
+            //canvas.drawRect(width - maxrect.width() - 20, 5+2+buttonHeight, width - 5, 5+buttonHeight-2+buttonHeight, paint_avg);
+            //canvas.drawRect(width - maxrect.width() - 20, 5+2+2*buttonHeight, width - 5, 5+buttonHeight-2+2*buttonHeight, paint_fft);
         }
         //canvas.drawText(note,xofs+(width-xofs)/2.0f,unitrect.bottom,paint_note);
 
@@ -719,9 +788,18 @@ public class SpectralView  extends View {
                     float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     if (0 == trackidx) {
-                        if (showPeak) canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                        if (showAvg) canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                        if (showFFT) canvas.drawCircle(X, Y, 10f, paint_fft);
+                        if (showPeak) {
+                            canvas.drawCircle(X, Ypeak, 10f, paint_max);
+                            canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                        }
+                        if (showAvg) {
+                            canvas.drawCircle(X, Yavg, 10f, paint_avg);
+                            canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                        }
+                        if (showFFT) {
+                            canvas.drawCircle(X, Y, 10f, paint_fft);
+                            // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
+                        }
                     }
                     for (int i = 2; i < logf.length; i++) {
                         float y2 = dataConsolidator.y[i];
@@ -748,9 +826,18 @@ public class SpectralView  extends View {
                         //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
                         //canvas.drawLine(X, Y, X2, Y2, paint_fft);
                         if (i == trackidx) {
-                            if (showPeak) canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                            if (showAvg) canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                            if (showFFT) canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                            if (showPeak) {
+                                canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
+                                canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                            }
+                            if (showAvg)  {
+                                canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
+                                canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                            }
+                            if (showFFT) {
+                                canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                                // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
+                            }
                         }
                         X = X2;
                         Y = Y2;
@@ -774,9 +861,18 @@ public class SpectralView  extends View {
                     float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     if (0 == trackidx) {
-                        if (showPeak) canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                        if (showAvg) canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                        if (showFFT) canvas.drawCircle(X, Y, 10f, paint_fft);
+                        if (showPeak) {
+                            canvas.drawCircle(X, Ypeak, 10f, paint_max);
+                            canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                        }
+                        if (showAvg) {
+                            canvas.drawCircle(X, Yavg, 10f, paint_avg);
+                            canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                        }
+                        if (showFFT) {
+                            canvas.drawCircle(X, Y, 10f, paint_fft);
+                            // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
+                        }
                     }
                     for (int i = 2; i < dataConsolidator.len / 2; i++) {
                         float f2 = dataConsolidator.f[i];
@@ -803,9 +899,18 @@ public class SpectralView  extends View {
                         //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
                         //canvas.drawLine(X, Y, X2, Y2, paint_fft);
                         if (i == trackidx) {
-                            if (showPeak) canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                            if (showAvg) canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                            if (showFFT) canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                            if (showPeak) {
+                                canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
+                                canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                            }
+                            if (showAvg)  {
+                                canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
+                                canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                            }
+                            if (showFFT) {
+                                canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                                // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
+                            }
                         }
                         X = X2;
                         Y = Y2;

@@ -43,7 +43,7 @@ public class ProcessResult {
 
         f=audioAnalyzerHelper.fftGetData(0,len/2).clone();
         y=audioAnalyzerHelper.fftGetData(1,len/2).clone();
-        fres=audioAnalyzerHelper.fftGetData(2,12).clone();
+        fres=audioAnalyzerHelper.fftGetData(2,20).clone();
         yavg=audioAnalyzerHelper.fftGetData(3,len/2).clone();
         ypeak=audioAnalyzerHelper.fftGetData(4,len/2).clone();
 

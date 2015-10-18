@@ -417,7 +417,7 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
                 recms += fftsize;
                 /*for (int i=0;i<fftsize;i++) {
                     float t=(float)i/fsample;
-                    sData[i]=(short)(32767.0*Math.sin(2*Math.PI*1000*t));
+                    sData[i]=(short)(32767.0*Math.sin(2*Math.PI*10000*t));
                 }*/
 
                 ProcessBuffer pb = new ProcessBuffer(fsample, fftsize, sData);

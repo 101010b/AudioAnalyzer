@@ -39,6 +39,8 @@ public:
     float *FLAT;
     float *K1;
     float *AFILTER;
+    float *BFILTER;
+    float *CFILTER;
 
     float *FRES;
     float pkval;
@@ -62,6 +64,10 @@ public:
 public:
     FftProcessor();
     ~FftProcessor();
+
+    float filter_A_dB(float f);
+    float filter_B_dB(float f);
+    float filter_C_dB(float f);
 
     void setData(int len, float fs, int window, float tf, short *data,float fmin, float fmax,int pixels,
                  bool logscale);

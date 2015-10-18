@@ -19,10 +19,38 @@ public class DataConsolidator {
     int len;
     float trackf;
 
-    final static String[] powerTrackNames = {"Flat","Flat10k","Flat20k","1kHz","A10-20k","A100-20k","A10-10k","A100-10k","Track","Peak"};
-    String[] powerTrackLongNames = {"AC RMS", "0-10kHz","0-20kHz","1kHz",
-            "A-Weighted, 10Hz-20kHz","A-Weighted, 100Hz-20kHz","A-Weighted, 10Hz-10kHz","A-Weighted, 100Hz-10kHz","Track","Peak"};
-    int[] powerTrackIds = {2,3,4,5,6,9,7,8,11,10};
+    final static String[] powerTrackNames =
+            {       "Flat",                     "Flat10k",                  "Flat20k",
+                    "1kHz",
+                    "A10-20k",                  "A100-20k",
+                    "A10-10k",                  "A100-10k",
+                    "B10-20k",                  "B100-20k",
+                    "B10-10k",                  "B100-10k",
+                    "C10-20k",                  "C100-20k",
+                    "C10-10k",                  "C100-10k",
+                    "Track",                    "Peak"
+            };
+    String[] powerTrackLongNames =
+            {       "AC RMS",                   "0-10kHz",                  "0-20kHz",
+                    "1kHz",
+                    "A-Weighted, 10Hz-20kHz",   "A-Weighted, 100Hz-20kHz",
+                    "A-Weighted, 10Hz-10kHz",   "A-Weighted, 100Hz-10kHz",
+                    "B-Weighted, 10Hz-20kHz",   "B-Weighted, 100Hz-20kHz",
+                    "B-Weighted, 10Hz-10kHz",   "B-Weighted, 100Hz-10kHz",
+                    "C-Weighted, 10Hz-20kHz",   "C-Weighted, 100Hz-20kHz",
+                    "C-Weighted, 10Hz-10kHz",   "C-Weighted, 100Hz-10kHz",
+                    "Track",                    "Peak"
+            };
+    int[] powerTrackIds =
+            {       2,                          3,                          4,
+                    5,
+                    6,                          9,
+                    7,                          8,
+                    12,                         15,
+                    13,                         14,
+                    16,                         19,
+                    17,                         18,
+                    11,10};
 
     PowerTrack[] powerTracks = new PowerTrack[powerTrackIds.length];
 

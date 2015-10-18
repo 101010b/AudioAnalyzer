@@ -290,14 +290,19 @@ public class LevelBar  extends View {
 
     public void drawCornerRect(Canvas canvas, int left, int top, int right, int bottom, Paint p) {
         int rw=10;
-        canvas.drawLine(left,top+rw,left,top,p);
-        canvas.drawLine(left,top,left+rw,top,p);
-        canvas.drawLine(right-rw,top,right,top,p);
-        canvas.drawLine(right,top,right,top+rw,p);
-        canvas.drawLine(right,bottom-rw,right,bottom,p);
-        canvas.drawLine(right,bottom,right-rw,bottom,p);
-        canvas.drawLine(left+rw,bottom,left,bottom,p);
-        canvas.drawLine(left,bottom,left,bottom-rw,p);
+        float[] pts=
+                {
+                    left,top+rw,left,top,
+                    left,top,left+rw,top,
+                    right-rw,top,right,top,
+                    right,top,right,top+rw,
+                    right,bottom-rw,right,bottom,
+                    right,bottom,right-rw,bottom,
+                    left+rw,bottom,left,bottom,
+                    left,bottom,left,bottom-rw,
+                };
+
+        canvas.drawLines(pts,0,pts.length,p);
     }
 
     @Override

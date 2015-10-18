@@ -23,12 +23,20 @@
         <item>Hann</item>
         <item>Hamming</item>
         <item>Blackman</item>
+        <item>Blackman-Harris</item>
+        <item>Blackman-Nuttall</item>
+        <item>Flat-Top</item>
+        <item>Bartlett</item>
     </string-array>
     <string-array name="pref_fft_window_entry_values">
         <item>0</item>
         <item>1</item>
         <item>2</item>
         <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
     <string-array name="pref_waterfall_colorscheme">
         <item>KrYW</item>
