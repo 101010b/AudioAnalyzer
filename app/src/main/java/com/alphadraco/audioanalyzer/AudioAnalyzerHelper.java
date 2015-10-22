@@ -25,6 +25,11 @@ public class AudioAnalyzerHelper {
 
     public native boolean WaveViewProcessData(int [] bmapin, int width, int height, short [] data, int scale);
 
+    public native boolean SignalSetup(int fs);
+    public native boolean SignalProg(int param, float value);
+    public native boolean SignalSource(short [] erg);
+    public native boolean SignalWavHeader(byte [] header);
+
 
     float [] erg=new float[4096];
 

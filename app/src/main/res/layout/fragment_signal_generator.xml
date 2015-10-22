@@ -1,0 +1,528 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    >
+    <!-- tools:context="com.alphadraco.audioanalyzer.SignalGenerator" -->
+
+    <!-- TODO: Update blank fragment layout -->
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="left|top"
+        android:padding="0dp"
+        >
+
+
+        <SeekBar
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/sb_quick_input"
+            android:max="1000"
+            android:progress="500"
+            android:thumb="@drawable/valueselectthumb"
+            android:progressDrawable="@drawable/valueselectbar"
+            android:padding="5dp"
+            android:background="#FF000000"/>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/scrollView">
+
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="fill_parent"
+            android:padding="5dp">
+
+			<TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Signal Generator"
+                    android:id="@+id/sw_signal_onoff"
+                    android:layout_column="1" />
+            </TableRow>
+			
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Modulator"
+                    android:id="@+id/sw_signal_mod_onoff"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_mod_freq"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency"
+                    android:id="@+id/textView20"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_mod_freq"
+                    android:text="10.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hz"
+                    android:id="@+id/textView21"
+                    android:layout_column="2" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_mod_amp"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Amplitude"
+                    android:id="@+id/textView22"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal"					
+                    android:ems="10"
+                    android:id="@+id/nm_signal_mod_amp"
+                    android:text="-20.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="dBFS"
+                    android:id="@+id/textView23"
+                    android:layout_column="2" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Function"
+                    android:id="@+id/textView24"
+                    android:layout_column="0" />
+
+                <Spinner
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/sp_signal_mod_func"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_mod_pwm"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PWM"
+                    android:id="@+id/textView25"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_mod_pwm"
+                    android:text="50.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+
+				<TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="%"
+                    android:id="@+id/textView26"
+                    android:layout_column="2" />
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AM"
+                    android:id="@+id/cb_signal_mod_AM"
+                    android:layout_column="1" />
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FM"
+                    android:id="@+id/cb_signal_mod_FM"
+                    android:layout_column="1" />
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PhaseM"
+                    android:id="@+id/cb_signal_mod_PM"
+                    android:layout_column="1" />
+            </TableRow>
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PWM"
+                    android:id="@+id/cb_signal_mod_PWM"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sweep Generator"
+                    android:id="@+id/sw_signal_swp_onoff"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_swp_start"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Start"
+                    android:id="@+id/textView27"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_swp_start"
+                    android:text="100"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+					
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hz"
+                    android:id="@+id/textView28"
+                    android:layout_column="2" />
+					
+					
+					
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_swp_stop"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stop"
+                    android:id="@+id/textView29"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_swp_stop"
+                    android:text="20000"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+					
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hz"
+                    android:id="@+id/textView30"
+                    android:layout_column="2" />
+				
+					
+            </TableRow>
+			
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Logarithmic"
+                    android:id="@+id/cb_signal_swp_log"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_swp_time"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SweepTime"
+                    android:id="@+id/textView31"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_swp_time"
+                    android:text="10"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+					
+				<TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="s"
+                    android:id="@+id/textView32"
+                    android:layout_column="2" />
+					
+					
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sweep Type"
+                    android:id="@+id/textView33"
+                    android:layout_column="0" />
+
+                <Spinner
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/sp_signal_swp_func"
+                    android:layout_column="1" />
+            </TableRow>
+			
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Loop Sweep"
+                    android:id="@+id/cb_signal_swp_loop"
+                    android:layout_column="1" />
+            </TableRow>			
+			
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+			    <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Trigger"
+                    android:id="@+id/bn_signal_swp_trigger"
+                    android:layout_column="1" />
+            </TableRow>			
+			
+			
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <CheckBox
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency Sweep"
+                    android:id="@+id/cb_signal_fsweep"
+                    android:layout_column="1" />
+            </TableRow>
+
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Switch
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Main Generator"
+                    android:id="@+id/sw_signal_gen_onoff"
+                    android:layout_column="1" />
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_gen_freq"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Frequency"
+                    android:id="@+id/textView34"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_gen_freq"
+                    android:text="1000.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+
+				<TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hz"
+                    android:id="@+id/textView35"
+                    android:layout_column="2" />
+					
+            </TableRow>
+
+            <TableRow android:id="@+id/tr_signal_gen_amp"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Amplitude"
+                    android:id="@+id/textView36"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberSigned|numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_gen_amp"
+                    android:text="-10.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+					
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="dBFS"
+                    android:id="@+id/textView37"
+                    android:layout_column="2" />	
+					
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Function"
+                    android:id="@+id/textView38"
+                    android:layout_column="0" />
+
+                <Spinner
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/sp_signal_gen_func"
+                    android:layout_column="1" />
+            </TableRow>
+
+
+            <TableRow android:id="@+id/tr_signal_gen_pwm"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PWM"
+                    android:id="@+id/textView39"
+                    android:layout_column="0" />
+
+                <EditText
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:ems="10"
+                    android:id="@+id/nm_signal_gen_pwm"
+                    android:text="50.0"
+                    android:singleLine="true"
+                    android:numeric="decimal"
+                    android:layout_column="1" />
+
+				<TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="%"
+                    android:id="@+id/textView40"
+                    android:layout_column="2" />	
+            </TableRow>
+
+        </TableLayout>
+
+        </ScrollView>
+
+
+
+
+    </LinearLayout>
+
+</FrameLayout>

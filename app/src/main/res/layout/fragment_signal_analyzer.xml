@@ -1,0 +1,115 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    >
+<!-- tools:context="com.alphadraco.audioanalyzer.SignalAnalyzer" -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@drawable/hdivider"
+        android:focusableInTouchMode="false"
+        android:showDividers="middle">
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:padding="0dp"
+            android:background="@android:color/black">
+
+            <ImageButton
+                android:layout_width="40dip"
+                android:layout_height="40dip"
+                android:id="@+id/bn_play_pause"
+                android:src="@mipmap/pause_button"
+                android:scaleType="fitXY"
+                android:padding="0dp"
+                android:background="@android:color/black" />
+
+            <ImageButton
+                android:layout_width="40dip"
+                android:layout_height="40dip"
+                android:id="@+id/bn_spec_mode"
+                android:src="@mipmap/waterfall_button"
+                android:scaleType="fitXY"
+                android:padding="0dp"
+                android:background="@android:color/black" />
+
+            <ImageButton
+                android:layout_width="40dip"
+                android:layout_height="40dip"
+                android:id="@+id/bn_cal"
+                android:src="@mipmap/cal_button"
+                android:scaleType="fitXY"
+                android:padding="0dp"
+                android:background="@android:color/black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <TextView
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="test"
+                    android:id="@+id/tx_cal"
+                    android:layout_weight="1"
+                    android:background="@android:color/black"
+                    android:textColor="#00ff00" />
+
+                <TextView
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="test"
+                    android:id="@+id/tx_status"
+                    android:layout_weight="1"
+                    android:background="@android:color/black"
+                    android:textColor="#00ff00" />
+            </LinearLayout>
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:id="@+id/bn_zoom_all"
+                android:padding="0dp"
+                android:background="@android:color/black"
+                android:src="@mipmap/zoom_all"
+                android:scaleType="fitXY" />
+
+        </LinearLayout>
+
+        <com.alphadraco.audioanalyzer.LevelBar
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:id="@+id/bv_bar1"
+            android:background="@android:color/black" />
+
+        <com.alphadraco.audioanalyzer.LevelBar
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:id="@+id/bv_bar2"
+            android:background="@android:color/black" />
+
+        <com.alphadraco.audioanalyzer.SpectralView
+            android:layout_width="match_parent"
+            android:layout_height="fill_parent"
+            android:id="@+id/vw_spec"
+            android:layout_below="@+id/textView"
+            android:layout_alignParentStart="true"
+            android:background="@android:color/black"
+            android:layout_weight="1" />
+
+        <com.alphadraco.audioanalyzer.WaveView
+            android:layout_width="fill_parent"
+            android:layout_height="60dip"
+            android:id="@+id/wv_wave"
+            android:background="@android:color/black" />
+
+    </LinearLayout>
+
+</FrameLayout>

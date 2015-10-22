@@ -1,11 +1,10 @@
 <resources>
     <string name="app_name">AudioAnalyzer</string>
 
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    <!--string name="action_settings">Settings</string -->
 
     <string name="aboutText">
-        <b>10/17/2015 Thomas Buck</b>\n
+        <b>2015 Thomas Buck 101010b</b>\n
         https://55476f744974.wordpress.com/\n
         \n
         <b>This is an Open Source Project</b>\n

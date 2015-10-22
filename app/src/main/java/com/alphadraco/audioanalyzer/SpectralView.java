@@ -9,7 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.provider.ContactsContract;
-import android.support.annotation.DimenRes;
+// import android.support.annotation.DimenRes;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.Menu;
@@ -228,7 +228,12 @@ public class SpectralView  extends View {
         maxrect=new Rect(rct);
         maxrect.offset(0, 5 + rct.height());
 
-        colorTabStrings=getResources().getStringArray(R.array.pref_waterfall_colorscheme);
+        if (isInEditMode()) {
+            colorTabStrings=new String[1];
+            colorTabStrings[0]="krYW";
+        } else {
+            colorTabStrings = getResources().getStringArray(R.array.pref_waterfall_colorscheme);
+        }
         colorTabString=colorTabStrings[0];
         colorTable=new ColorTable(256,colorTabString);
 
@@ -384,9 +389,9 @@ public class SpectralView  extends View {
                         SharedPreferences.Editor E = SpectralPrefs.edit();
                         E.putFloat("TrackF", trackf);
                         E.apply();
+                        pointers=0;
+                        return true;
                     }
-                    pointers=0;
-                    return true;
                 }
                 if ((pointers > 0) && (SpectralPrefs != null)) {
                     // Store Data

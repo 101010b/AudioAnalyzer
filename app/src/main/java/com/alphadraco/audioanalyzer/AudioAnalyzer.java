@@ -1,18 +1,26 @@
 package com.alphadraco.audioanalyzer;
 
 import android.app.ActionBar;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.net.rtp.AudioCodec;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
+// import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -20,22 +28,42 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
+import android.widget.Switch;
+import android.widget.TabHost;
+import android.widget.TabWidget;
 import android.widget.TextView;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenuItemClickListener {
+// public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenuItemClickListener {
+public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClickListener {
+
+    private TabHost myTabHost;
 
     AudioRecord audioRecord;
+    AudioTrack audioPlayer;
+    AudioSource audioSource;
+
     private Thread recordingThread = null;
     private Thread processingThread = null;
+    private Thread playingThread = null;
     private SpectralView spectralView=null;
     private LevelBar levelBar1=null;
     private LevelBar levelBar2=null;
@@ -45,7 +73,6 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
     private boolean pause=false;
     public boolean resetPeak=false;
 
-    private int recbufsize=0;
     private int[] fftsizes = {128,256,512,1024,2048,4096,8192};
     private int fftsize=fftsizes[0];
     private int window=0;
@@ -64,11 +91,12 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
     private ProcessResultList processResultList;
     private DataConsolidator dataConsolidator;
 
-    private AudioAnalyzerHelper audioAnalyzerHelper;
+    public AudioAnalyzerHelper audioAnalyzerHelper;
 
     private SharedPreferences.OnSharedPreferenceChangeListener listener;
-    private SharedPreferences AudioAnalyzerPrefs;
+    public SharedPreferences AudioAnalyzerPrefs;
 
+    // Analyzer GUI
     private ImageButton bn_play_pause;
     private ImageButton bn_menu;
     private ImageButton bn_spec_mode;
@@ -77,6 +105,9 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
 
     private TextView tx_status;
     private TextView tx_cal;
+
+    // Generator GUI
+    public ArrayList<ControlInput> fgen_list;
 
     // Calibration
     float mic_in_MO;
@@ -148,26 +179,64 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
         E.apply();
     }
 
+    private void setNewTab(Context context, TabHost tabHost, String tag, String title, int icon, int contentID ){
+        TabHost.TabSpec tabSpec = tabHost.newTabSpec(tag);
+        tabSpec.setIndicator(getTabIndicator(tabHost.getContext(), title, icon)); // new function to inject our own tab layout
+        tabSpec.setContent(contentID);
+        tabHost.addTab(tabSpec);
+    }
+
+    private View getTabIndicator(Context context, String title, int icon) {
+        View view = LayoutInflater.from(context).inflate(R.layout.tab_layout, null);
+        ImageView iv = (ImageView) view.findViewById(R.id.imageView);
+        iv.setImageResource(icon);
+        TextView tv = (TextView) view.findViewById(R.id.textView);
+        tv.setText(title);
+        return view;
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getSupportActionBar().hide();
+        getActionBar().hide();
+        //getSupportActionBar().hide();
         setContentView(R.layout.activity_audio_analyzer);
 
+        myTabHost = (TabHost) findViewById(R.id.tabhost);
+        myTabHost.setup();
+
+        /*
+        TabHost.TabSpec spec = myTabHost.newTabSpec("tab_analyze");
+        spec.setIndicator("Analyzer", getResources().getDrawable(android.R.drawable.ic_menu_add));
+        spec.setContent(R.id.analyze);
+        myTabHost.addTab(spec);
+         */
+
+        setNewTab(this,myTabHost,"tab_analyze","Analyzer",R.mipmap.sink,R.id.analyze);
+        setNewTab(this,myTabHost,"tab_generate","Generator",R.mipmap.source,R.id.generate);
+
+        /*
+        myTabHost.addTab(myTabHost.newTabSpec("tab_analyze").setIndicator("Analyzer",
+                getResources().getDrawable(android.R.drawable.ic_menu_add)).setContent(R.id.analyze));
+
+        myTabHost.addTab(myTabHost.newTabSpec("tab_generate").setIndicator("Generator",
+                getResources().getDrawable(android.R.drawable.ic_menu_edit)).setContent(R.id.generate));
+
+        TabWidget tw=myTabHost.getTabWidget();
+        */
+
+        // Analyzer GUI
         bn_play_pause=(ImageButton) findViewById(R.id.bn_play_pause);
         bn_menu=(ImageButton) findViewById(R.id.bn_show_menu);
         bn_cal=(ImageButton) findViewById(R.id.bn_cal);
         bn_spec_mode=(ImageButton) findViewById(R.id.bn_spec_mode);
         bn_zoom_all=(ImageButton) findViewById(R.id.bn_zoom_all);
-
         tx_status=(TextView) findViewById(R.id.tx_status);
         tx_cal=(TextView) findViewById(R.id.tx_cal);
-
         waveView=(WaveView) findViewById(R.id.wv_wave);
+        spectralView=(SpectralView) findViewById(R.id.vw_spec);
 
         // Load Preferences
         AudioAnalyzerPrefs =  PreferenceManager.getDefaultSharedPreferences(this);
-
         listener=new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
@@ -211,18 +280,16 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
         mic_Pref=Float.parseFloat(AudioAnalyzerPrefs.getString("CalMic_P","94"));
         mic_dBFS=Float.parseFloat(AudioAnalyzerPrefs.getString("CalMic_S","-20.0"));
 
-        int minBuffSize = AudioRecord.getMinBufferSize(fsample, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-        recbufsize=minBuffSize;
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,fsample,
-                AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,2*8192);
-
-        spectralView=(SpectralView) findViewById(R.id.vw_spec);
         spectralView.setPreferences(AudioAnalyzerPrefs);
         spectralView.audioAnalyzer=this;
 
         waveView.setPreferences(AudioAnalyzerPrefs);
-
         calmode=Integer.parseInt(AudioAnalyzerPrefs.getString("calMode","0"));
+
+        int minBuffSize = AudioRecord.getMinBufferSize(fsample, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        // recbufsize=minBuffSize;
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,fsample,
+                AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,2*8192);
 
         levelBar1=(LevelBar)findViewById(R.id.bv_bar1);
         levelBar1.intmode=0;
@@ -231,13 +298,15 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
 
         levelBar2=(LevelBar)findViewById(R.id.bv_bar2);
         levelBar2.intmode=8;
-        levelBar2.setPreferences(AudioAnalyzerPrefs,1);
+        levelBar2.setPreferences(AudioAnalyzerPrefs, 1);
 
         updateCal();
 
         audioAnalyzerHelper = new AudioAnalyzerHelper();
         waveView.helper=audioAnalyzerHelper;
         spectralView.helper=audioAnalyzerHelper;
+
+        audioSource=new AudioSource(audioAnalyzerHelper);
 
         dataConsolidator = new DataConsolidator();
         dataConsolidator.nft=audioAnalyzerHelper;
@@ -276,6 +345,14 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
         }, "AudioProcessing Thread");
         processingThread.start();
 
+        playingThread = new Thread(new Runnable() {
+            public void run() {
+                playAudioData();
+            }
+        }, "AudioPlaying Thread");
+        playingThread.start();
+
+        // Analyzer GUI Interactions
         bn_menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -305,14 +382,14 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
             public void onClick(View v) {
                 if (spectralView.islog) {
                     spectralView.fmin = dataConsolidator.f[1];
-                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len/2 - 1];
+                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
                     if (!spectralView.displaywaterfall) {
                         spectralView.lmin = -120;
                         spectralView.lmax = 0;
                     }
                 } else {
                     spectralView.fmin = 0;
-                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len/2 - 1];
+                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
                     if (!spectralView.displaywaterfall) {
                         spectralView.lmin = -120;
                         spectralView.lmax = 0;
@@ -334,10 +411,18 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
                         switch (item.getItemId()) {
-                            case 1: calmode = 0; break;
-                            case 2: calmode = 1; break;
-                            case 3: calmode = 2; break;
-                            case 4: calmode = 3; break;
+                            case 1:
+                                calmode = 0;
+                                break;
+                            case 2:
+                                calmode = 1;
+                                break;
+                            case 3:
+                                calmode = 2;
+                                break;
+                            case 4:
+                                calmode = 3;
+                                break;
                         }
                         SharedPreferences.Editor E = AudioAnalyzerPrefs.edit();
                         E.putInt("CalMode", calmode);
@@ -354,10 +439,10 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
             @Override
             public void onClick(View v) {
                 if (spectralView.displaywaterfall) {
-                    spectralView.displaywaterfall=false;
+                    spectralView.displaywaterfall = false;
                     bn_spec_mode.setImageResource(R.mipmap.waterfall_button);
                 } else {
-                    spectralView.displaywaterfall=true;
+                    spectralView.displaywaterfall = true;
                     bn_spec_mode.setImageResource(R.mipmap.spectral_button);
                 }
                 SharedPreferences.Editor E = AudioAnalyzerPrefs.edit();
@@ -365,6 +450,60 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
                 E.apply();
             }
         });
+
+        // Generator GUI Interactions
+        ArrayList<String> fgen_function_list = new ArrayList<String>();
+        fgen_function_list.add("Sine");
+        fgen_function_list.add("Triangle");
+        fgen_function_list.add("Saw");
+        fgen_function_list.add("Rectangle");
+        fgen_function_list.add("Noise");
+        ArrayList<String> sweep_function_list = new ArrayList<String>();
+        sweep_function_list.add("Upwards");
+        sweep_function_list.add("Downwards");
+        sweep_function_list.add("Up-Down");
+
+        fgen_list=new ArrayList<ControlInput>(0);
+        fgen_list.add(new ControlInput(this,R.id.sw_signal_onoff,"Signal_OnOff",21,false));
+
+        fgen_list.add(new ControlInput(this,R.id.sw_signal_mod_onoff,   "Signal_Mod_OnOff",     4,  false));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_mod_freq, R.id.sb_quick_input,
+                                            R.id.nm_signal_mod_freq,    "Signal_Mod_freq",      0,  0.1f,24.0e3f,10.0f,"%1.1f"));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_mod_amp, R.id.sb_quick_input,
+                                            R.id.nm_signal_mod_amp,     "Signal_Mod_amp",       1,  -100.0f,0.0f,-20.0f,"%1.1f",true));
+        fgen_list.add(new ControlInput(this,R.id.sp_signal_mod_func,    "Signal_Mod_func",      2,  fgen_function_list,0));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_mod_pwm, R.id.sb_quick_input,
+                                            R.id.nm_signal_mod_pwm,     "Signal_Mod_pwidth",    3,  0.0f,100.0f,50.0f,"%1.0f",0.01f));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_AM,      "Signal_Mod_AM",        17, false));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_FM,      "Signal_Mod_FM",        18, false));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_PM,      "Signal_Mod_PM",        19, false));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_PWM,     "Signal_Mod_PWM",       20, false));
+
+        fgen_list.add(new ControlInput(this,R.id.sw_signal_swp_onoff,   "Signal_Sweep_OnOff",   10, false));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_swp_start, R.id.sb_quick_input,
+                                            R.id.nm_signal_swp_start,   "Signal_Sweep_start",   5,  0.1f,24.0e3f,100.0f,"%1.1f"));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_swp_stop, R.id.sb_quick_input,
+                                            R.id.nm_signal_swp_stop,    "Signal_Sweep_stop",    6,  0.1f,24.0e3f,20.0e3f,"%1.1f"));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_swp_log,     "Signal_Sweep_log",     7,  true));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_swp_time, R.id.sb_quick_input,
+                                            R.id.nm_signal_swp_time,    "Signal_Sweep_time",    9,  0.1f,600.0f,10.0f,"%1.1f"));
+        fgen_list.add(new ControlInput(this,R.id.sp_signal_swp_func,    "Signal_Sweep_func",    8,  sweep_function_list,0));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_swp_loop,    "Signal_Sweep_loop",    22, true));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_fsweep,      "Signal_Fsweep",        16, false));
+
+        fgen_list.add(new ControlInput(this,R.id.sw_signal_gen_onoff,   "Signal_Gen_OnOff",     15, true));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_gen_freq, R.id.sb_quick_input,
+                                            R.id.nm_signal_gen_freq,    "Signal_Gen_freq",      11, 0.1f,24.0e3f,1000.0f,"%1.1f"));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_gen_amp, R.id.sb_quick_input,
+                                            R.id.nm_signal_gen_amp,     "Signal_Gen_amp",       12, -100.0f,0.0f,-20.0f,"%1.1f",true));
+        fgen_list.add(new ControlInput(this,R.id.sp_signal_gen_func,    "Signal_Gen_func",      13, fgen_function_list,0));
+        fgen_list.add(new ControlInput(this,R.id.tr_signal_gen_pwm, R.id.sb_quick_input,
+                                            R.id.nm_signal_gen_pwm,     "Signal_Mod_pwidth",    14, 0.0f,100.0f,50.0f,"%1.0f",0.01f));
+
+        fgen_list.add(new ControlInput(this,R.id.bn_signal_swp_trigger,23));
+
+        SeekBar sb=(SeekBar) findViewById(R.id.sb_quick_input);
+        // sb.setThumb(getResources().getDrawable(R.drawable.valueselectthumb));
 
     }
 
@@ -446,11 +585,37 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
         }
     }
 
+    // Audio playing Process (Signal Generator)
+    private void playAudioData() {
+        int bufsize=AudioTrack.getMinBufferSize(44100,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT);
+        short[] data1 = new short[bufsize/4];
+        //short[] data2 = new short[bufsize/4];
+        boolean playstarted=false;
+
+        audioPlayer=new AudioTrack(AudioManager.STREAM_MUSIC,
+                44100, AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT,
+                bufsize,AudioTrack.MODE_STREAM);
+
+        // audioPlayer.play();
+        // audioSource.getData(data2);
+        audioPlayer.play();
+
+        while (isRecording && (audioPlayer != null)) {
+            audioSource.getData(data1);
+            audioPlayer.write(data1, 0, data1.length);
+            // audioPlayer.flush();
+            // try { Thread.sleep(10); } catch (InterruptedException E) { }
+            // audioPlayer.write(data2, 0, data2.length);
+        }
+
+    }
+
     private void stopRecording() {
         // stops the recording activity
         if (null != audioRecord) {
             isRecording = false;
             audioRecord.stop();
+            audioPlayer.stop();
             // recorder.release();
             // recorder = null;
             recordingThread = null;
@@ -476,10 +641,20 @@ public class AudioAnalyzer extends AppCompatActivity implements PopupMenu.OnMenu
 
     void showAboutWin() {
         View messageView = getLayoutInflater().inflate(R.layout.aboutwin,null,false);
+        TextView tv=(TextView) messageView.findViewById(R.id.tv_about_version);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setIcon(R.mipmap.ic_launcher);
         builder.setTitle("AudioAnalyzer");
+        String version="undefined";
+        try {
+            PackageManager manager = this.getPackageManager();
+            PackageInfo info = manager.getPackageInfo(this.getPackageName(), 0);
+            version = info.versionName;
+        } catch (PackageManager.NameNotFoundException E) {
+            // Ignore
+        }
+        tv.setText(version);
         builder.setView(messageView);
         builder.create();
         builder.show();

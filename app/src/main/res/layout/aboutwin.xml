@@ -8,7 +8,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="0.0.0"
-        android:id="@+id/textView3"
+        android:id="@+id/tv_about_version"
         android:layout_gravity="left" />
 
     <TextView

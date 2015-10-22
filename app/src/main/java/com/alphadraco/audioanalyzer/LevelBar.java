@@ -7,7 +7,7 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.support.annotation.DimenRes;
+// import android.support.annotation.DimenRes;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.Menu;

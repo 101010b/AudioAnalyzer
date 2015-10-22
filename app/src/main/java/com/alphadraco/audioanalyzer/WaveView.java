@@ -146,6 +146,9 @@ public class WaveView extends View {
     @Override
     public void onDraw(Canvas canvas) {
         if (helper==null) return;
+        // if (helper.sharedMap==null) return;
+        if (dataConsolidator==null) return;
+        if (dataConsolidator.wave == null) return;
 
         int width=canvas.getWidth();
         int height=canvas.getHeight();
