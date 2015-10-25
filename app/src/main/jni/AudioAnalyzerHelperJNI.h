@@ -152,6 +152,7 @@ public:
     bool PMon;
     bool AMon;
     bool PWMon;
+    bool ADD;
 
     FunctionGenerator *FG,*FMOD;
     SweepGenerator *SG;

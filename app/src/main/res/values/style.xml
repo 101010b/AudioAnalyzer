@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ATheme" parent="android:Theme.DeviceDefault">
+        <item name="android:textViewStyle">@style/ATextView</item>
+        <item name="android:editTextStyle">@style/AEditText</item>
+        <item name="android:buttonStyle">@style/AButton</item>
+        <item name="android:checkboxStyle">@style/ACheckBox</item>
+        <item name="android:switchPreferenceStyle">@style/ASwitch</item>
+    </style>
+
+    <style name="AEditText" parent="@android:style/Widget.EditText">
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+    <style name="ATextView" parent="@android:style/Widget.TextView">
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+    <style name="AButton" parent="@android:style/Widget.Button">
+        <item name="android:background">@drawable/abutton</item>
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+    <style name="ACheckBox" parent="@android:style/Widget.CompoundButton.CheckBox">
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+    <style name="ASwitch" parent="@android:style/Widget.CompoundButton.CheckBox">
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+    <style name="ASpinnerDropDownItem" parent="@android:style/Widget.TextView.SpinnerItem">
+        <item name="android:textColor">#FF00FF00</item>
+        <item name="android:background">@drawable/aspinneritem</item>
+    </style>
+    <style name="ASpinnerItemStyle" parent="@android:style/Widget.TextView.SpinnerItem">
+        <item name="android:textColor">#FF00FF00</item>
+        <item name="android:background">@drawable/aspinnerstyle</item>
+    </style>
+    <style name="SwitchTextAppearance" parent="@android:style/TextAppearance">
+        <item name="android:textColor">#FF00FF00</item>
+    </style>
+</resources>

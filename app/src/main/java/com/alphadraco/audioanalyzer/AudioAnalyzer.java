@@ -15,6 +15,8 @@ import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
+import android.media.audiofx.AutomaticGainControl;
 import android.net.rtp.AudioCodec;
 import android.preference.PreferenceManager;
 // import android.support.v7.app.AppCompatActivity;
@@ -83,6 +85,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
     private int calmode=0;
 
+    private boolean generator_on=false;
+
     private ScheduledExecutorService scheduledExecutorService;
 
     private Semaphore dataAvailable;
@@ -99,6 +103,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     // Analyzer GUI
     private ImageButton bn_play_pause;
     private ImageButton bn_menu;
+    private ImageButton bn_speaker;
     private ImageButton bn_spec_mode;
     private ImageButton bn_cal;
     private ImageButton bn_zoom_all;
@@ -227,6 +232,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         // Analyzer GUI
         bn_play_pause=(ImageButton) findViewById(R.id.bn_play_pause);
         bn_menu=(ImageButton) findViewById(R.id.bn_show_menu);
+        bn_speaker=(ImageButton) findViewById(R.id.bn_speaker);
         bn_cal=(ImageButton) findViewById(R.id.bn_cal);
         bn_spec_mode=(ImageButton) findViewById(R.id.bn_spec_mode);
         bn_zoom_all=(ImageButton) findViewById(R.id.bn_zoom_all);
@@ -288,8 +294,18 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
         int minBuffSize = AudioRecord.getMinBufferSize(fsample, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         // recbufsize=minBuffSize;
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,fsample,
+        /* MediaRecorder.AudioSource.VOICE_RECOGNITION has AGC turned off --> calibration is possible
+           MediaRecorder.AudioSource.MIC has AGC turned on --> BAD
+        */
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION,fsample,
                 AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,2*8192);
+
+        /* This does nothing on all my devices...
+        AutomaticGainControl agc= AutomaticGainControl.create(audioRecord.getAudioSessionId());
+        AcousticEchoCanceler aec=AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
+        if (agc != null) agc.setEnabled(false);
+        if (aec != null) aec.setEnabled(false);
+        */
 
         levelBar1=(LevelBar)findViewById(R.id.bv_bar1);
         levelBar1.intmode=0;
@@ -327,8 +343,10 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         processBufferList=new ProcessBufferList(3);
         processResultList=new ProcessResultList(3);
 
+
         recms=0;
-        audioRecord.startRecording();
+        if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED)
+            audioRecord.startRecording();
         isRecording=true;
 
         recordingThread = new Thread(new Runnable() {
@@ -352,6 +370,18 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         }, "AudioPlaying Thread");
         playingThread.start();
 
+        generator_on=AudioAnalyzerPrefs.getBoolean("Signal_OnOff",false);
+        if (generator_on)
+            bn_speaker.setImageResource(R.mipmap.speaker_on);
+        else
+            bn_speaker.setImageResource(R.mipmap.speaker);
+        audioAnalyzerHelper.SignalProg(21,(generator_on)?1.0f:0.0f);
+
+
+        if (AudioAnalyzerPrefs.getBoolean("DisplayWaterfall",false)) {
+            bn_spec_mode.setImageResource(R.mipmap.spectral_button);
+        }
+
         // Analyzer GUI Interactions
         bn_menu.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -361,6 +391,23 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
                 MenuInflater inflater = popup.getMenuInflater();
                 inflater.inflate(R.menu.menu_audio_analyzer, popup.getMenu());
                 popup.show();
+            }
+        });
+
+        bn_speaker.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (generator_on) {
+                    generator_on=false;
+                    bn_speaker.setImageResource(R.mipmap.speaker);
+                } else {
+                    generator_on=true;
+                    bn_speaker.setImageResource(R.mipmap.speaker_on);
+                }
+                audioAnalyzerHelper.SignalProg(21,(generator_on)?1.0f:0.0f);
+                SharedPreferences.Editor e=AudioAnalyzerPrefs.edit();
+                e.putBoolean("Signal_OnOff",generator_on);
+                e.commit();
             }
         });
 
@@ -380,21 +427,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         bn_zoom_all.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (spectralView.islog) {
-                    spectralView.fmin = dataConsolidator.f[1];
-                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
-                    if (!spectralView.displaywaterfall) {
-                        spectralView.lmin = -120;
-                        spectralView.lmax = 0;
-                    }
-                } else {
-                    spectralView.fmin = 0;
-                    spectralView.fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
-                    if (!spectralView.displaywaterfall) {
-                        spectralView.lmin = -120;
-                        spectralView.lmax = 0;
-                    }
-                }
+                spectralView.zoomAll();
             }
         });
 
@@ -464,7 +497,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         sweep_function_list.add("Up-Down");
 
         fgen_list=new ArrayList<ControlInput>(0);
-        fgen_list.add(new ControlInput(this,R.id.sw_signal_onoff,"Signal_OnOff",21,false));
+        // fgen_list.add(new ControlInput(this,R.id.sw_signal_onoff,"Signal_OnOff",21,false));
 
         fgen_list.add(new ControlInput(this,R.id.sw_signal_mod_onoff,   "Signal_Mod_OnOff",     4,  false));
         fgen_list.add(new ControlInput(this,R.id.tr_signal_mod_freq, R.id.sb_quick_input,
@@ -478,6 +511,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_FM,      "Signal_Mod_FM",        18, false));
         fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_PM,      "Signal_Mod_PM",        19, false));
         fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_PWM,     "Signal_Mod_PWM",       20, false));
+        fgen_list.add(new ControlInput(this,R.id.cb_signal_mod_ADD,     "Signal_Mod_ADD",       24, false));
 
         fgen_list.add(new ControlInput(this,R.id.sw_signal_swp_onoff,   "Signal_Sweep_OnOff",   10, false));
         fgen_list.add(new ControlInput(this,R.id.tr_signal_swp_start, R.id.sb_quick_input,
@@ -548,6 +582,26 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     private void recordAudioData() {
         short sData[] = new short[8192];
 
+        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+            // Just emulate sound source
+            while (isRecording) {
+                if (!pause) {
+                    recms += fftsize;
+                    for (int i=0;i<fftsize;i++) {
+                        float t=(float)i/fsample;
+                        sData[i]=(short)(32767.0*Math.sin(2*Math.PI*10000*t));
+                    }
+                    ProcessBuffer pb = new ProcessBuffer(fsample, fftsize, sData);
+                    processBufferList.add(pb);
+                    try { Thread.sleep(fftsize*1000/fsample,0); }
+                    catch (InterruptedException E ){
+                        // Ignore
+                    }
+                }
+            }
+            return;
+        }
+
         while (isRecording) {
             // gets the voice output from microphone to byte format
 
@@ -614,7 +668,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         // stops the recording activity
         if (null != audioRecord) {
             isRecording = false;
-            audioRecord.stop();
+            if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED)
+                audioRecord.stop();
             audioPlayer.stop();
             // recorder.release();
             // recorder = null;

@@ -493,6 +493,31 @@ public class SpectralView  extends View {
         return true;
     }
 
+    public void zoomAll() {
+        if (islog) {
+            fmin = dataConsolidator.f[1];
+            fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
+            if (!displaywaterfall) {
+                lmin = -120;
+                lmax = 0;
+            }
+        } else {
+            fmin = 0;
+            fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
+            if (!displaywaterfall) {
+                lmin = -120;
+                lmax = 0;
+            }
+        }
+        SharedPreferences.Editor E=SpectralPrefs.edit();
+        E.putBoolean("SpecDisplayLog",islog);
+        E.putFloat("LMIN", lmin);
+        E.putFloat("LMAX",lmax);
+        E.putFloat("FMIN",fmin);
+        E.putFloat("FMAX",fmax);
+        E.apply();
+    }
+
     public String getFstring(float f) {
         float af=Math.abs(f);
         if (f==0) return "0Hz";

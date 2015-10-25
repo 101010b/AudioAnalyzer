@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android" >
-    <!--item>
+    <item android:top="-10dp" android:left="-10dp" android:right="-10dp">
         <shape android:shape="rectangle">
-            <gradient android:startColor="#FFFF0000"
-                android:endColor="#FF8000"
-                android:angle="-90" />
-            <corners
-                android:bottomRightRadius="10dp"
-                android:bottomLeftRadius="10dp"
-                android:topLeftRadius="10dp"
-                android:topRightRadius="10dp" />
+            <stroke android:width="4dp"
+                android:color="#FF00FF00" />
         </shape>
-    </item-->
+    </item>
     <item android:top="0dp" android:bottom="0dp" android:left="0dp" android:right="0dp">
         <shape android:shape="rectangle">
             <padding android:left="0dp"
@@ -20,10 +14,10 @@
                 android:bottom="0dp" />
             <!--stroke android:width="1dp" android:color="#FF00FF00" /-->
             <!--solid android:color="#FF000000"/-->
-            <gradient android:startColor="#FF000000"
+            <!--gradient android:startColor="#FF000000"
                 android:centerColor="#FF000000"
                 android:endColor="#FF008000"
-                android:angle="0" />
+                android:angle="0" / -->
         </shape>
     </item>
 

@@ -6,7 +6,8 @@
     android:paddingLeft="0dp"
     android:paddingTop="0dp"
     android:paddingRight="0dp"
-    android:paddingBottom="0dp">
+    android:paddingBottom="0dp"
+    android:background="#FF000000">
 
     <TabHost
         android:id="@+id/tabhost"
@@ -28,6 +29,14 @@
                     android:background="#FF000000"
                     android:padding="0dp">
                 </TabWidget>
+                <ImageButton
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:id="@+id/bn_speaker"
+                    android:padding="0dp"
+                    android:background="@android:color/black"
+                    android:src="@mipmap/speaker"
+                    android:scaleType="fitXY" />
                 <ImageButton
                     android:layout_width="40dp"
                     android:layout_height="40dp"

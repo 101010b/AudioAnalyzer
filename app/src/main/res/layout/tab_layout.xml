@@ -3,7 +3,8 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="@drawable/tab_widget_background"  >
+    android:background="@drawable/tab_widget_background"
+    android:paddingBottom="4dp">
 
 
     <ImageView android:id="@+id/imageView"

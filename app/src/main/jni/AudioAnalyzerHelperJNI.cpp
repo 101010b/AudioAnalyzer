@@ -717,7 +717,7 @@ void SignalGenerator::init(int _fs) {
     online=false;
     blocklen=0;
     SWEEPon=false;
-    AMon=FMon=PMon=PWMon=false;
+    AMon=FMon=PMon=PWMon=ADD=false;
 }
 
 SignalGenerator::SignalGenerator() {
@@ -764,9 +764,11 @@ void SignalGenerator::calculateBlock(short *erg, int len) {
     FG->calculateBlock((SWEEPon)?swp:NULL,(FMon)?smod:NULL,(PMon)?smod:NULL,
                        (AMon)?smod:NULL,(PWMon)?smod:NULL,sout,len);
 
+
     for (int i=0;i<len;i++) {
         // float v=sinf(2*M_PIf*1000.0f*i/fs);
         float v=sout[i];
+        if (ADD) v+=smod[i];
         if (v <= -1.0f) erg[i]=-32767;
         else if (v >= 1.0f) erg[i]=32767;
         else erg[i]=(short)floorf(v*32767.0f+0.5f);
@@ -825,6 +827,7 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalProg(JNIEnv
         case 21: signalGenerator->online=(value>0.5f);break;
         case 22: signalGenerator->SG->loop=(value>0.5f);break;
         case 23: signalGenerator->SG->trigger();break;
+        case 24: signalGenerator->ADD=(value>0.5f);break;
         default:
             return (jboolean)false;
     }

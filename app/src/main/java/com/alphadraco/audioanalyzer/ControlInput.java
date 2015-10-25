@@ -1,11 +1,14 @@
 package com.alphadraco.audioanalyzer;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -63,6 +66,10 @@ public class ControlInput {
     private float float_scale;
     private String float_format;
 
+
+
+
+
     public void init(AudioAnalyzer aa, int rowid, int seekid, int id, String nme, final int tgt, boolean bool_def,  float float_def, float min, float max, boolean db_float, float float_sc,
                      String float_fmt,
                      ArrayList<String> sl, int spin_def) {
@@ -76,7 +83,7 @@ public class ControlInput {
             quickSeekBar.setMax(1000);
             CtrlList=root.fgen_list;
             normBkg=Color.TRANSPARENT;
-            highlightBkg=Color.argb(255, 180, 200, 180);
+            highlightBkg=Color.argb(255, 0, 30, 0);
         }
 
         View v=root.findViewById(id);
@@ -89,16 +96,17 @@ public class ControlInput {
             iSwitch.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    boolean n=iSwitch.isChecked();
-                    if (n != bool_val)  {
-                        bool_val=n;
-                        SharedPreferences.Editor e=root.AudioAnalyzerPrefs.edit();
-                        e.putBoolean(name,bool_val);
+                    boolean n = iSwitch.isChecked();
+                    if (n != bool_val) {
+                        bool_val = n;
+                        SharedPreferences.Editor e = root.AudioAnalyzerPrefs.edit();
+                        e.putBoolean(name, bool_val);
                         e.apply();
-                        root.audioAnalyzerHelper.SignalProg(tgtID,(bool_val)?1.0f:0.0f);
+                        root.audioAnalyzerHelper.SignalProg(tgtID, (bool_val) ? 1.0f : 0.0f);
                     }
                 }
             });
+            iSwitch.setTextAppearance(root,R.style.SwitchTextAppearance);
         } else if (v instanceof EditText) {
             nf=NumberFormat.getInstance();
             nf.setMaximumFractionDigits(32);
@@ -167,6 +175,8 @@ public class ControlInput {
                                 @Override
                                 public void onStartTrackingTouch(SeekBar seekBar) {
                                     float_val_save=float_val;
+                                    InputMethodManager imm = (InputMethodManager)root.getApplicationContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                                    imm.hideSoftInputFromWindow(iEditText.getWindowToken(), 0);
                                 }
 
                                 @Override
@@ -204,7 +214,7 @@ public class ControlInput {
                         iEditText.setTextColor(Color.RED);
                         return;
                     } else
-                        iEditText.setTextColor(Color.BLACK);
+                        iEditText.setTextColor(0xFF00FF00);
                     if (f != float_val) {
                         float_val = f;
                         SharedPreferences.Editor e = root.AudioAnalyzerPrefs.edit();
@@ -239,9 +249,12 @@ public class ControlInput {
         } else if (v instanceof Spinner) {
             fieldType=FieldType.IN_SPIN;
             iSpinner=(Spinner)v;
+            //ArrayAdapter<String> adapter = new ArrayAdapter<String>(root,
+            //        android.R.layout.simple_spinner_item,sl);
             ArrayAdapter<String> adapter = new ArrayAdapter<String>(root,
-                    android.R.layout.simple_spinner_item,sl);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                R.layout.asimple_spinner_item,sl);
+            // adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            adapter.setDropDownViewResource(R.layout.asimple_spinner_list_item);
             iSpinner.setAdapter(adapter);
             sel_val=root.AudioAnalyzerPrefs.getInt(name,spin_def);
             sel_max=sl.size()-1;
