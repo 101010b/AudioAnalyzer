@@ -12,7 +12,7 @@ public class DataConsolidator {
     float ypeak[];
     short wave[];
 
-    AudioAnalyzerHelper nft;
+    AudioAnalyzer root;
 
     int window;
     float fs;
@@ -30,7 +30,7 @@ public class DataConsolidator {
                     "C10-10k",                  "C100-10k",
                     "Track",                    "Peak"
             };
-    String[] powerTrackLongNames =
+    final String[] powerTrackLongNames =
             {       "AC RMS",                   "0-10kHz",                  "0-20kHz",
                     "1kHz",
                     "A-Weighted, 10Hz-20kHz",   "A-Weighted, 100Hz-20kHz",
@@ -50,7 +50,7 @@ public class DataConsolidator {
                     13,                         14,
                     16,                         19,
                     17,                         18,
-                    11,10};
+                    11,                         10};
 
     PowerTrack[] powerTracks = new PowerTrack[powerTrackIds.length];
 
@@ -62,7 +62,10 @@ public class DataConsolidator {
     public void reset() {
         f=y=yavg=ypeak=null;
         wave=null;
-        if (nft != null) nft.fftResetPeak();
+
+        if ((root != null) && (root.audioAnalyzerHelper != null))
+            root.audioAnalyzerHelper.fftResetPeak();
+
         window=len=-1;
         fs=-1.0f;
         trackf=-1;
@@ -70,18 +73,21 @@ public class DataConsolidator {
             p.reset();
     }
 
-    public DataConsolidator() {
+    public DataConsolidator(AudioAnalyzer _root) {
         f=y=yavg=ypeak=null;
         wave=null;
+        root=_root;
         initPowerTracks();
         reset();
     }
 
     public void tick() {
-        for (PowerTrack p:powerTracks) p.tick();
+        for (PowerTrack p:powerTracks)
+            p.tick();
     }
 
     public void add(ProcessResult pr) {
+
         if ((f == null) || (pr.fs != fs) || (pr.len != len)) {
             // New Package
             f=pr.f.clone();
@@ -97,17 +103,16 @@ public class DataConsolidator {
             fs=pr.fs;
             return;
         }
+
         // Accumulate
         y=pr.y;
         yavg=pr.yavg;
         ypeak=pr.ypeak;
         wave=pr.wave;
-        /*for (int i=0;i<y.length;i++) {
-            if (y[i] > ypeak[i])
-                ypeak[i]=y[i];
-        }*/
+
         for (PowerTrack p:powerTracks)
             p.add(pr.fres[p.id]);
+
     }
 
 

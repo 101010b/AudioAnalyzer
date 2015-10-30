@@ -41,11 +41,19 @@ public class ProcessResult {
 
         audioAnalyzerHelper.fftProcess();
 
+        f=audioAnalyzerHelper.fftGetData(0,len/2);
+        y=audioAnalyzerHelper.fftGetData(1,len/2);
+        fres=audioAnalyzerHelper.fftGetData(2,20);
+        yavg=audioAnalyzerHelper.fftGetData(3,len/2);
+        ypeak=audioAnalyzerHelper.fftGetData(4,len/2);
+
+        /*
         f=audioAnalyzerHelper.fftGetData(0,len/2).clone();
         y=audioAnalyzerHelper.fftGetData(1,len/2).clone();
         fres=audioAnalyzerHelper.fftGetData(2,20).clone();
         yavg=audioAnalyzerHelper.fftGetData(3,len/2).clone();
         ypeak=audioAnalyzerHelper.fftGetData(4,len/2).clone();
+        */
 
         wave=src.data;
 

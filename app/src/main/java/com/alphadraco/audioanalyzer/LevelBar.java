@@ -37,7 +37,7 @@ public class LevelBar  extends View {
     Paint paint_text_unit = new Paint();
     Paint paint_text_hint = new Paint();
 
-    DataConsolidator dataConsolidator;
+    // DataConsolidator dataConsolidator;
     PowerTrack powerTrack;
     PowerTrack peakPowerTrack;
 
@@ -64,9 +64,12 @@ public class LevelBar  extends View {
     int LevelIndex;
     SharedPreferences.OnSharedPreferenceChangeListener PrefListener;
 
-    public void setPreferences(SharedPreferences prefs, int idx) {
+    AudioAnalyzer root;
+
+    public void setPreferences(AudioAnalyzer _rt, SharedPreferences prefs, int idx) {
         LevelPreferences=prefs;
         LevelIndex=idx;
+        root=_rt;
         if (LevelPreferences != null) {
             intmode = prefs.getInt(String.format("LevelView%dMode",LevelIndex), 0);
             showactual = prefs.getInt(String.format("LevelView%dLevel",LevelIndex), 0);
@@ -160,8 +163,10 @@ public class LevelBar  extends View {
 
         fixedmode=false;
 
-        dataConsolidator=null;
+        root=null;
+        // dataConsolidator=null;
         powerTrack=null;
+        peakPowerTrack=null;
 
         unit="dBFS";
         ofs=0.0f;
@@ -179,11 +184,11 @@ public class LevelBar  extends View {
     }
 
     private void showModeMenu() {
-        if (dataConsolidator==null) return;
+        if (root.dataConsolidator==null) return;
         PopupMenu P = new PopupMenu(getContext(),this);
         Menu menu = P.getMenu();
-        for (int i=0;i<dataConsolidator.powerTrackLongNames.length;i++) {
-            menu.add(0,i+1,Menu.NONE,dataConsolidator.powerTrackLongNames[i]);
+        for (int i=0;i<root.dataConsolidator.powerTrackLongNames.length;i++) {
+            menu.add(0,i+1,Menu.NONE,root.dataConsolidator.powerTrackLongNames[i]);
         }
         P.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
@@ -191,7 +196,7 @@ public class LevelBar  extends View {
                 int id = item.getItemId();
                 if (id < 1) return false;
                 intmode = id - 1;
-                powerTrack = dataConsolidator.powerTracks[intmode];
+                powerTrack = root.dataConsolidator.powerTracks[intmode];
                 SharedPreferences.Editor e = LevelPreferences.edit();
                 e.putInt(String.format("LevelView%dMode", LevelIndex), intmode);
                 e.apply();
@@ -202,7 +207,7 @@ public class LevelBar  extends View {
     }
 
     private void showLevelMenu() {
-        if (dataConsolidator == null) return;
+        if (root.dataConsolidator == null) return;
         PopupMenu P = new PopupMenu(getContext(),this, Gravity.RIGHT);
         Menu menu = P.getMenu();
         menu.add(0,1,Menu.NONE,"RMS, Current");
@@ -235,15 +240,15 @@ public class LevelBar  extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        if ((dataConsolidator != null) && (e.getAction()==MotionEvent.ACTION_DOWN)) {
+        if ((root.dataConsolidator != null) && (e.getAction()==MotionEvent.ACTION_DOWN)) {
             float x=e.getX();
             float y=e.getY();
             if (x < frontSpace) {
                 if (!fixedmode) {
                     showModeMenu();
-                    /*if (intmode < dataConsolidator.powerTracks.length - 1) intmode++;
+                    /*if (intmode < root.dataConsolidator.powerTracks.length - 1) intmode++;
                     else intmode = 0;
-                    powerTrack = dataConsolidator.powerTracks[intmode];
+                    powerTrack = root.dataConsolidator.powerTracks[intmode];
                     if (LevelPreferences != null) {
                         SharedPreferences.Editor E=LevelPreferences.edit();
                         E.putInt(String.format("LevelView%dMode",LevelIndex),intmode);
@@ -315,8 +320,8 @@ public class LevelBar  extends View {
         if ((powerTrack != null)) {
             if (powerTrack.name.equals("Track")) {
                 String s="Track";
-                if (dataConsolidator.trackf > 0) {
-                    s=getFstring(dataConsolidator.trackf);
+                if (root.dataConsolidator.trackf > 0) {
+                    s=getFstring(root.dataConsolidator.trackf);
                 }
                 canvas.drawText(s, 10, height / 2.0f + fontHeight / 2.0f, paint_levels);
             } else
@@ -521,23 +526,22 @@ public class LevelBar  extends View {
         }
     }
 
-    public void display(DataConsolidator dc) {
-        if (dc == null) {
-            dataConsolidator=null;
+    public void add() {
+    }
+
+    public void display() {
+        if ((root == null) || (root.dataConsolidator == null)) {
             powerTrack=null;
             peakPowerTrack=null;
-        } else {
-            if (dc != dataConsolidator) {
-                dataConsolidator = dc;
-                powerTrack = dataConsolidator.powerTracks[intmode];
-                peakPowerTrack = null;
-                if (fixedmode) {
-                    for (PowerTrack p:dataConsolidator.powerTracks)
-                        if (p.name.equals("Peak")) {
-                            peakPowerTrack=p;
-                        }
+            return;
+        }
+        powerTrack = root.dataConsolidator.powerTracks[intmode];
+        peakPowerTrack = null;
+        if (fixedmode) {
+            for (PowerTrack p:root.dataConsolidator.powerTracks)
+                if (p.name.equals("Peak")) {
+                    peakPowerTrack=p;
                 }
-            }
         }
         invalidate();
     }

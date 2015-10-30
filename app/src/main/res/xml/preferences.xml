@@ -38,6 +38,15 @@
             android:summary="Scheme = %s">
         </ListPreference>
     </PreferenceCategory>
+    <PreferenceCategory android:title="Strip Plot Display">
+        <ListPreference android:title="Length" android:key="StripPlotLength"
+            android:dialogTitle="StripPlot Length"
+            android:entries="@array/pref_strip_length"
+            android:entryValues="@array/pref_strip_length"
+            android:defaultValue="64"
+            android:summary="Length = %s points">
+        </ListPreference>
+    </PreferenceCategory>
     <PreferenceCategory android:title="Calibration External Mic">
         <com.alphadraco.audioanalyzer.ADEditTextPreference
             android:defaultValue="10"

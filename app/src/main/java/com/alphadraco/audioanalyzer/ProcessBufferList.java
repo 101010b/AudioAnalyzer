@@ -10,7 +10,7 @@ public class ProcessBufferList {
     private ProcessBuffer lst[];
     private int write;
     private int read;
-    public boolean overflow;
+    public int overflow;
     private Semaphore semaphore;
     final Object monitorObject = new Object();
 
@@ -18,7 +18,7 @@ public class ProcessBufferList {
         lst=new ProcessBuffer[_length];
         semaphore=new Semaphore(1);
         read=write=0;
-        overflow=false;
+        overflow=0;
     }
 
     public void doWait() {
@@ -44,7 +44,7 @@ public class ProcessBufferList {
             read=(read+1)%lst.length;
         }
         read=write=0;
-        overflow=false;
+        overflow=0;
         semaphore.release();
     }
 
@@ -56,7 +56,7 @@ public class ProcessBufferList {
                 lst[read]=null;
                 read=(read +1) % lst.length;
             semaphore.release();
-            overflow=true;
+            overflow++;
             lst[write]=p;
             write=wnext;
         } else {

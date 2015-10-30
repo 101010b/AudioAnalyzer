@@ -25,15 +25,19 @@ public class WaveView extends View {
     private SharedPreferences WavePreferences;
     private SharedPreferences.OnSharedPreferenceChangeListener PrefListener;
     private Paint paint_text;
-    public AudioAnalyzerHelper helper;
-    private DataConsolidator dataConsolidator;
+    public AudioAnalyzer root;
+    // public AudioAnalyzerHelper helper;
+    // private DataConsolidator dataConsolidator;
     private int scale;
     private float fontyofs;
     private int xofs;
 
 
-    public void setPreferences(SharedPreferences prefs) {
+
+
+    public void setPreferences(AudioAnalyzer _rt,  SharedPreferences prefs) {
         WavePreferences=prefs;
+        root=_rt;
         if (WavePreferences != null) {
             scale = prefs.getInt("WaveViewScale", 1);
             PrefListener=new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -46,11 +50,12 @@ public class WaveView extends View {
             WavePreferences.registerOnSharedPreferenceChangeListener(PrefListener);
         } else
             PrefListener=null;
+
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        if ((dataConsolidator != null) && (e.getAction()==MotionEvent.ACTION_DOWN)) {
+        if ((root.dataConsolidator != null) && (e.getAction()==MotionEvent.ACTION_DOWN)) {
             float x=e.getX();
             float y=e.getY();
 
@@ -145,24 +150,29 @@ public class WaveView extends View {
 
     @Override
     public void onDraw(Canvas canvas) {
-        if (helper==null) return;
-        // if (helper.sharedMap==null) return;
-        if (dataConsolidator==null) return;
-        if (dataConsolidator.wave == null) return;
+        if (root == null) return;
+        if (root.audioAnalyzerHelper==null) return;
+        // if (root.audioAnalyzerHelper.sharedMap==null) return;
+        if (root.dataConsolidator==null) return;
+        if (root.dataConsolidator.wave == null) return;
+        if (root.audioAnalyzerHelper.sharedMap == null) return;
 
         int width=canvas.getWidth();
         int height=canvas.getHeight();
 
-        if (helper.sharedMap == null) {
+        /*
+        if (root.audioAnalyzerHelper.sharedMap == null) {
             // Initialize
-            helper.WaveViewInit(width-2-xofs,height-2);
-            if (helper.sharedMap == null)
+            root.audioAnalyzerHelper.WaveViewInit(width-2-xofs,height-2);
+            if (root.audioAnalyzerHelper.sharedMap == null)
                 return;
         }
 
-        helper.WaverViewProcess(dataConsolidator.wave, scale);
+        root.audioAnalyzerHelper.WaverViewProcess(root.dataConsolidator.wave, scale);
+        */
+        root.audioAnalyzerHelper.WaveViewCopyMapToBitmap();
 
-        canvas.drawBitmap(helper.sharedMap, xofs + 1, 1, null);
+        canvas.drawBitmap(root.audioAnalyzerHelper.sharedMap, xofs + 1, 1, null);
         canvas.drawRect(xofs, 0, width - 1, height - 1, paint_text);
 
 
@@ -179,8 +189,28 @@ public class WaveView extends View {
         canvas.drawText(String.format("%1.3f",-1.0f/(float)scale),xofs-5,height-1,paint_text);
     }
 
-    public void display(DataConsolidator dc) {
-        dataConsolidator=dc;
+    public void add() {
+        if (root == null) return;
+        if (root.audioAnalyzerHelper==null) return;
+        // if (root.audioAnalyzerHelper.sharedMap==null) return;
+        if (root.dataConsolidator==null) return;
+        if (root.dataConsolidator.wave == null) return;
+
+        int width=getWidth();
+        int height=getHeight();
+
+        if (root.audioAnalyzerHelper.sharedMap == null) {
+            // Initialize
+            root.audioAnalyzerHelper.WaveViewInit(width-2-xofs,height-2);
+            if (root.audioAnalyzerHelper.sharedMap == null)
+                return;
+        }
+
+        root.audioAnalyzerHelper.WaverViewProcess(root.dataConsolidator.wave, scale);
+
+    }
+
+    public void display() {
         invalidate();
     }
 

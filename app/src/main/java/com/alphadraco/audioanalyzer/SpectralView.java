@@ -42,14 +42,12 @@ public class SpectralView  extends View {
     Paint textX = new Paint();
     Paint textYL = new Paint();
 
+    // Cache for Points
     float [] line1;
     float [] line2;
     float [] line3;
 
-
-    DataConsolidator dataConsolidator;
-    AudioAnalyzerHelper helper;
-    AudioAnalyzer audioAnalyzer;
+    AudioAnalyzer root;
 
     float[] logf;
 
@@ -68,11 +66,6 @@ public class SpectralView  extends View {
     float storeLmin,storeLmax;
     float storeFmin,storeFmax;
 
-    float mPreviousX;
-    float mPreviousY;
-
-    float mPreviousX2;
-    float mPreviousY2;
 
     boolean gridredraw;
 
@@ -104,8 +97,11 @@ public class SpectralView  extends View {
     SharedPreferences SpectralPrefs;
     SharedPreferences.OnSharedPreferenceChangeListener PrefListener;
 
-    public void setPreferences(SharedPreferences prefs) {
+
+
+    public void setPreferences(AudioAnalyzer _rt, SharedPreferences prefs) {
         SpectralPrefs=prefs;
+        root=_rt;
         if (SpectralPrefs != null) {
             lmin = SpectralPrefs.getFloat("LMIN",-120.0f);
             lmax = SpectralPrefs.getFloat("LMAX", 0.0f);
@@ -142,6 +138,7 @@ public class SpectralView  extends View {
         float stdsize = new Button(context).getTextSize();
         PrefListener=null;
         SpectralPrefs=null;
+        root=null;
 
         paint_mark.setColor(Color.BLUE);
         paint_mark.setStyle(Paint.Style.STROKE);
@@ -293,6 +290,7 @@ public class SpectralView  extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        if (root == null) return true;
 
         switch (e.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -320,7 +318,7 @@ public class SpectralView  extends View {
                         if (PT0Y < 5 + buttonHeight) {
                             showPeak = !showPeak;
                             if (showPeak)
-                                dataConsolidator.reset();
+                                root.dataConsolidator.reset();
                             SharedPreferences.Editor E=SpectralPrefs.edit();
                             E.putBoolean("SpecDisplayPeak",showPeak);
                             E.apply();
@@ -443,10 +441,10 @@ public class SpectralView  extends View {
                         } else {
                             ttf=(e.getX()-xofs)/(getWidth() - 1 - xofs)*(fmax - fmin)+fmin;
                         }
-                        if (ttf < dataConsolidator.f[1])
-                            ttf=dataConsolidator.f[1];
-                        if (ttf > dataConsolidator.f[dataConsolidator.len/2-1])
-                            ttf=dataConsolidator.f[dataConsolidator.len/2-1];
+                        if (ttf < root.dataConsolidator.f[1])
+                            ttf=root.dataConsolidator.f[1];
+                        if (ttf > root.dataConsolidator.f[root.dataConsolidator.len/2-1])
+                            ttf=root.dataConsolidator.f[root.dataConsolidator.len/2-1];
                         trackf=ttf;
                     }
                 } else if (pointers==2) {
@@ -494,16 +492,17 @@ public class SpectralView  extends View {
     }
 
     public void zoomAll() {
+        if (root == null) return;
         if (islog) {
-            fmin = dataConsolidator.f[1];
-            fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
+            fmin = root.dataConsolidator.f[1];
+            fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
             if (!displaywaterfall) {
                 lmin = -120;
                 lmax = 0;
             }
         } else {
             fmin = 0;
-            fmax = dataConsolidator.f[dataConsolidator.len / 2 - 1];
+            fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
             if (!displaywaterfall) {
                 lmin = -120;
                 lmax = 0;
@@ -553,8 +552,9 @@ public class SpectralView  extends View {
     }
 
     private void showColorMenu() {
+        if (root==null) return;
         if (!displaywaterfall) return;
-        if (dataConsolidator==null) return;
+        if (root.dataConsolidator==null) return;
         PopupMenu P = new PopupMenu(getContext(),this,Gravity.LEFT+Gravity.FILL_VERTICAL+Gravity.BOTTOM);
         Menu menu = P.getMenu();
         for (int i=0;i<colorTabStrings.length;i++) {
@@ -647,7 +647,7 @@ public class SpectralView  extends View {
 
         drawFreqGrid(canvas, hofs, vofs, width, height, fmin, fmax, islog);
 
-        float tmax=(height - 1)/2*dataConsolidator.len/dataConsolidator.fs;
+        float tmax=(height - 1)/2*root.dataConsolidator.len/root.dataConsolidator.fs;
         int step=1;
         if (tmax > 50)
             step=5;
@@ -753,66 +753,70 @@ public class SpectralView  extends View {
         int height=canvas.getHeight();
         int trackidx=-1;
 
-        if ((dataConsolidator!=null) && (dataConsolidator.f != null) && (dataConsolidator.len > 0)) {
+        if (root == null) return;
+
+        if ((root.dataConsolidator!=null) && (root.dataConsolidator.f != null) && (root.dataConsolidator.len > 0)) {
 
             if (displaywaterfall) {
-                if (helper != null) {
+                if (root.audioAnalyzerHelper != null) {
                     int wd = (int)width-(int)xofs-2;
                     int ht = (int)height-(int)yofs-2-levelBarHeight;
                     boolean renewed=false;
-                    if ((helper.specMap == null) ||
-                            (helper.specMapWidth != wd) ||
-                            (helper.specMapHeight != ht)) {
+                    if ((root.audioAnalyzerHelper.specMap == null) ||
+                            (root.audioAnalyzerHelper.specMapWidth != wd) ||
+                            (root.audioAnalyzerHelper.specMapHeight != ht)) {
                         colorTable = new ColorTable(256,colorTabString);
                         renewed=true;
-                        helper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
+                        root.audioAnalyzerHelper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
                     }
                     if (!renewed && (
-                            (fmin != helper.specFmin) || (fmax != helper.specFmax) ||
-                            (islog != helper.specLogScale) ||
+                            (fmin != root.audioAnalyzerHelper.specFmin) || (fmax != root.audioAnalyzerHelper.specFmax) ||
+                            (islog != root.audioAnalyzerHelper.specLogScale) ||
                             !colorTabString.equals(colorTable.id))) {
                         if (!colorTabString.equals(colorTable.id)) {
                             colorTable = new ColorTable(256,colorTabString);
-                            helper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
+                            root.audioAnalyzerHelper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
                         } else
-                            helper.SpecViewInit(wd, ht, null, fmin, fmax, islog);
+                            root.audioAnalyzerHelper.SpecViewInit(wd, ht, null, fmin, fmax, islog);
                     }
-                    canvas.drawBitmap(helper.specMap, xofs + 1, 1 + levelBarHeight, null);
+
+                    root.audioAnalyzerHelper.fftCopySpecMaptoBitmap();
+                    canvas.drawBitmap(root.audioAnalyzerHelper.specMap, xofs + 1, 1 + levelBarHeight, null);
                 }
                 drawGrid(canvas);
             } else {
                 drawGrid(canvas);
                 canvas.clipRect(xofs+1,1,width-1-1,height-1-yofs-1);
 
-                if ((helper != null) && (helper.specMap != null)) {
-                    helper.SpecViewInit(0,0,null,0,0,false);
+                if ((root.audioAnalyzerHelper != null) && (root.audioAnalyzerHelper.specMap != null)) {
+                    root.audioAnalyzerHelper.SpecViewInit(0,0,null,0,0,false);
                 }
                 if (trackf > 0) {
-                    trackidx = (int) Math.floor(trackf / dataConsolidator.fs * dataConsolidator.len + 0.5);
+                    trackidx = (int) Math.floor(trackf / root.dataConsolidator.fs * root.dataConsolidator.len + 0.5);
                 }
                 int q1, q2, q3;
                 q1 = q2 = q3 = 0;
 
-                if ((line1 == null) || (line1.length != (dataConsolidator.f.length - 1) * 4)) {
-                    line1 = new float[(dataConsolidator.f.length - 1) * 4];
-                    line2 = new float[(dataConsolidator.f.length - 1) * 4];
-                    line3 = new float[(dataConsolidator.f.length - 1) * 4];
+                if ((line1 == null) || (line1.length != (root.dataConsolidator.len / 2 - 1) * 4)) {
+                    line1 = new float[(root.dataConsolidator.f.length - 1) * 4];
+                    line2 = new float[(root.dataConsolidator.f.length - 1) * 4];
+                    line3 = new float[(root.dataConsolidator.f.length - 1) * 4];
                 }
                 ;
 
                 if (islog) {
                     // Logarithmic
-                    if ((logf == null) || (logf.length != dataConsolidator.len / 2) ||
-                            (logf[0] != (float) Math.log(dataConsolidator.f[0] / fmin))) {
-                        if ((logf == null) || (logf.length != dataConsolidator.len / 2))
-                            logf = new float[dataConsolidator.len / 2];
+                    if ((logf == null) || (logf.length != root.dataConsolidator.len / 2) ||
+                            (logf[0] != (float) Math.log(root.dataConsolidator.f[0] / fmin))) {
+                        if ((logf == null) || (logf.length != root.dataConsolidator.len / 2))
+                            logf = new float[root.dataConsolidator.len / 2];
                         for (int i = 1; i < logf.length; i++)
-                            logf[i] = (float) Math.log(dataConsolidator.f[i] / fmin);
+                            logf[i] = (float) Math.log(root.dataConsolidator.f[i] / fmin);
                     }
                     float logfmaxmin = (float) Math.log(fmax / fmin);
-                    float y = dataConsolidator.y[1];
-                    float yavg = dataConsolidator.yavg[1];
-                    float ypeak = dataConsolidator.ypeak[1];
+                    float y = root.dataConsolidator.y[1];
+                    float yavg = root.dataConsolidator.yavg[1];
+                    float ypeak = root.dataConsolidator.ypeak[1];
                     float X = (float) xofs + (float) (logf[1] / logfmaxmin * (width - 1 - xofs));
                     float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
@@ -832,9 +836,9 @@ public class SpectralView  extends View {
                         }
                     }
                     for (int i = 2; i < logf.length; i++) {
-                        float y2 = dataConsolidator.y[i];
-                        float yavg2 = dataConsolidator.yavg[i];
-                        float ypeak2 = dataConsolidator.ypeak[i];
+                        float y2 = root.dataConsolidator.y[i];
+                        float yavg2 = root.dataConsolidator.yavg[i];
+                        float ypeak2 = root.dataConsolidator.ypeak[i];
                         float X2 = (float) xofs + (float) (logf[i] / logfmaxmin * (width - 1 - xofs));
                         float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
@@ -882,10 +886,10 @@ public class SpectralView  extends View {
                     // canvas.drawLine(X,gridfontheight,X,height-1-yofs-gridfontheight,paint_mark);
                 } else {
                     // Linear
-                    float f = dataConsolidator.f[1];
-                    float y = dataConsolidator.y[1];
-                    float yavg = dataConsolidator.yavg[1];
-                    float ypeak = dataConsolidator.ypeak[1];
+                    float f = root.dataConsolidator.f[1];
+                    float y = root.dataConsolidator.y[1];
+                    float yavg = root.dataConsolidator.yavg[1];
+                    float ypeak = root.dataConsolidator.ypeak[1];
                     float X = (float) xofs + (float) ((f - fmin) / (fmax - fmin) * (width - 1 - xofs));
                     float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
                     float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
@@ -904,11 +908,11 @@ public class SpectralView  extends View {
                             // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
                         }
                     }
-                    for (int i = 2; i < dataConsolidator.len / 2; i++) {
-                        float f2 = dataConsolidator.f[i];
-                        float y2 = dataConsolidator.y[i];
-                        float yavg2 = dataConsolidator.yavg[i];
-                        float ypeak2 = dataConsolidator.ypeak[i];
+                    for (int i = 2; i < root.dataConsolidator.len / 2; i++) {
+                        float f2 = root.dataConsolidator.f[i];
+                        float y2 = root.dataConsolidator.y[i];
+                        float yavg2 = root.dataConsolidator.yavg[i];
+                        float ypeak2 = root.dataConsolidator.ypeak[i];
                         float X2 = (float) xofs + (float) ((f2 - fmin) / (fmax - fmin) * (width - 1 - xofs));
                         float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
@@ -965,8 +969,7 @@ public class SpectralView  extends View {
         //    canvas.drawLine(width-1, 0, 0, height-1, paint);
     }
 
-    public void display(DataConsolidator dc) {
-        dataConsolidator=dc;
+    public void display() {
         invalidate();
     }
 

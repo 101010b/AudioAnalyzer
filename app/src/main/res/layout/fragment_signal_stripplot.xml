@@ -1,0 +1,100 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    >
+    <!-- tools:context="com.alphadraco.audioanalyzer.SignalAnalyzer" -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@drawable/hdivider"
+        android:focusableInTouchMode="false"
+        android:showDividers="middle">
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:padding="0dp"
+            android:background="@android:color/black">
+
+            <ImageButton
+                android:layout_width="40dip"
+                android:layout_height="40dip"
+                android:id="@+id/bn_sp_play_pause"
+                android:src="@mipmap/pause_button"
+                android:scaleType="fitXY"
+                android:padding="0dp"
+                android:background="@android:color/black" />
+
+            <ImageButton
+                android:layout_width="40dip"
+                android:layout_height="40dip"
+                android:id="@+id/bn_sp_cal"
+                android:src="@mipmap/cal_button"
+                android:scaleType="fitXY"
+                android:padding="0dp"
+                android:background="@android:color/black" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+            </LinearLayout>
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:id="@+id/bn_sp_plus"
+                android:padding="0dp"
+                android:background="@android:color/black"
+                android:src="@mipmap/plus"
+                android:scaleType="fitXY" />
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:id="@+id/bn_sp_minus"
+                android:padding="0dp"
+                android:background="@android:color/black"
+                android:src="@mipmap/minus"
+                android:scaleType="fitXY" />
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:id="@+id/bn_sp_style"
+                android:padding="0dp"
+                android:background="@android:color/black"
+                android:src="@mipmap/style"
+                android:scaleType="fitXY" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+            </LinearLayout>
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:id="@+id/bn_sp_zoom_all"
+                android:padding="0dp"
+                android:background="@android:color/black"
+                android:src="@mipmap/zoom_all"
+                android:scaleType="fitXY" />
+
+        </LinearLayout>
+
+        <com.alphadraco.audioanalyzer.StripPlotView
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:background="@android:color/black"
+            android:id="@+id/sp_plot" />
+
+    </LinearLayout>
+</FrameLayout>

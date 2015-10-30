@@ -933,6 +933,7 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorReset
     return (jboolean)true;
 }
 
+
 jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetData(JNIEnv *env, jobject obj,
                                      jint what, jint size) {
     jfloatArray result;
@@ -972,6 +973,44 @@ jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGe
             return NULL; // =env->NewFloatArray(0);
     }
     return result;
+}
+
+
+inline int min(int i1, int i2) { return (i1 < i2)?i1:i2; }
+
+jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetDataCopy(JNIEnv *env, jobject obj,
+                                                                                      jfloatArray result, int what) {
+    if (!fftProcessor) {
+        return NULL;
+    }
+
+    int size=env->GetArrayLength(result);
+
+    switch (what) {
+        case 0: // frequency
+            // result=env->NewFloatArray(fftProcessor->LEN/2);
+
+            //if (result)
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->F);
+            break;
+        case 1: // Y
+            //result=env->NewFloatArray(fftProcessor->LEN/2);
+            //if (result)
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->Y);
+            break;
+        case 2: // integrated values
+            env->SetFloatArrayRegion(result,0,min(20,size),fftProcessor->FRES);
+            break;
+        case 3: // Average Spectrum
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->YY);
+            break;
+        case 4: // Peak
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->YPEAK);
+            break;
+        default:
+            return (jboolean) false; // =env->NewFloatArray(0);
+    }
+    return (jboolean) true;
 }
 
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_WaveViewProcessData(JNIEnv *env, jobject obj,

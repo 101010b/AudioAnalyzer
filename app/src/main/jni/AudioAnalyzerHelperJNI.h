@@ -183,6 +183,8 @@ JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper
 
 JNIEXPORT jfloatArray JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetData(JNIEnv *env, jobject obj,
                                                           jint what, jint size);
+JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetDataCopy(JNIEnv *env, jobject obj,
+                                                          jfloatArray result, int what);
 
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorResetPeak(JNIEnv *env, jobject obj);
 

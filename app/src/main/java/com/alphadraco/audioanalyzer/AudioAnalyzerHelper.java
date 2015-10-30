@@ -17,6 +17,7 @@ public class AudioAnalyzerHelper {
                                               float fmin, float fmax, int pixels, boolean logscale);
     public native boolean fftProcessorProcess();
     public native float[]  fftProcessorGetData(int what, int size);
+    public native boolean fftProcessorGetDataCopy(float[] result, int what);
     public native boolean fftProcessorResetPeak();
 
     // public native boolean fftProcessorWaveViewSetup(Bitmap bmp);
@@ -31,7 +32,7 @@ public class AudioAnalyzerHelper {
     public native boolean SignalWavHeader(byte [] header);
 
 
-    float [] erg=new float[4096];
+    // float [] erg=new float[4096];
 
     public Bitmap sharedMap=null;
     int[] sharedMapBuffer=null;
@@ -68,11 +69,16 @@ public class AudioAnalyzerHelper {
         boolean rval=fftProcessorProcess();
         if ((specMap != null) && (specMapBuffer != null) && rval) {
             WaterfallProcessData(specMapBuffer,specMapWidth,specMapHeight,specColorTable,specColorTable.length);
-            if (specMap!=null) // TODO: Make Thread Safe!
-                specMap.setPixels(specMapBuffer, 0, specMapWidth, 0, 0, specMapWidth, specMapHeight);
         }
         return rval;
     }
+
+    void fftCopySpecMaptoBitmap() {
+        if (!initialized) return;
+        if (specMap!=null) // TODO: Make Thread Safe!
+            specMap.setPixels(specMapBuffer, 0, specMapWidth, 0, 0, specMapWidth, specMapHeight);
+    }
+
 
     boolean fftResetPeak() {
         if (!initialized) return false;
@@ -82,12 +88,20 @@ public class AudioAnalyzerHelper {
     float [] fftGetData(int what, int size) {
         if (!initialized) return null;
         // float [] erg=new float[4096];
+        float[] erg=new float[size];
+        if (fftProcessorGetDataCopy(erg,what))
+            return erg;
+        else
+            return null;
+
+        /*
         float[] terg=fftProcessorGetData(what,size);
+        float[] erg=new float[size];
         System.arraycopy(terg,0,erg,0,size);
         terg=null;
         // erg.clone() .copyOf(terg,4096);
         // if (terg.length < 1) return null;
-        return erg;
+        return erg;*/
     }
 
     // Waterfall Viewer
@@ -127,6 +141,7 @@ public class AudioAnalyzerHelper {
             fftProcessorWaveViewSetup(null);
             sharedMap=null;
         }*/
+        if ((width < 1) || (height < 1)) return;
         sharedMap=Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         sharedMapWidth=width;
         sharedMapHeight=height;
@@ -140,13 +155,41 @@ public class AudioAnalyzerHelper {
 
     }
 
+    short[] wavedata=null;
+    int waveuse;
+
+    void WaveViewCopyMapToBitmap() {
+        if (sharedMapBuffer == null)
+            return;
+        sharedMap.setPixels(sharedMapBuffer, 0, sharedMapWidth, 0, 0, sharedMapWidth, sharedMapHeight);
+    }
+
     void WaverViewProcess(short [] data, int scale) {
         if (sharedMap==null) return;
         if (sharedMapBuffer==null) return;
 
-        WaveViewProcessData(sharedMapBuffer,sharedMapWidth,sharedMapHeight,data,scale);
-        sharedMap.setPixels(sharedMapBuffer, 0, sharedMapWidth, 0, 0, sharedMapWidth, sharedMapHeight);
-
+        if (data.length < sharedMapWidth) {
+            // Accumulate
+            if ((wavedata == null) || (wavedata.length < sharedMapWidth)) {
+                wavedata = new short[sharedMapWidth];
+                waveuse = 0;
+            }
+            if (waveuse+data.length > wavedata.length) {
+                System.arraycopy(data,0,wavedata,waveuse,wavedata.length-waveuse);
+                waveuse=wavedata.length;
+            } else {
+                System.arraycopy(data,0,wavedata,waveuse,data.length);
+                waveuse+=data.length;
+            }
+            if (waveuse >= sharedMapWidth) {
+                WaveViewProcessData(sharedMapBuffer, sharedMapWidth, sharedMapHeight, wavedata, scale);
+                // sharedMap.setPixels(sharedMapBuffer, 0, sharedMapWidth, 0, 0, sharedMapWidth, sharedMapHeight);
+                waveuse=0;
+            }
+        } else {
+            WaveViewProcessData(sharedMapBuffer, sharedMapWidth, sharedMapHeight, data, scale);
+            // sharedMap.setPixels(sharedMapBuffer, 0, sharedMapWidth, 0, 0, sharedMapWidth, sharedMapHeight);
+        }
     }
 
 
