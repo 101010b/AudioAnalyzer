@@ -12,6 +12,13 @@ public class DataConsolidator {
     float ypeak[];
     short wave[];
 
+    int TERZn;
+    int TERZw;
+    float[] TERZf;
+    float[] TERZe;
+    float[] TERZeavg;
+    float[] TERZepeak;
+
     AudioAnalyzer root;
 
     int window;
@@ -62,6 +69,8 @@ public class DataConsolidator {
     public void reset() {
         f=y=yavg=ypeak=null;
         wave=null;
+        TERZe=TERZf=TERZeavg=TERZepeak=null;
+        TERZn=0;
 
         if ((root != null) && (root.audioAnalyzerHelper != null))
             root.audioAnalyzerHelper.fftResetPeak();
@@ -77,6 +86,9 @@ public class DataConsolidator {
         f=y=yavg=ypeak=null;
         wave=null;
         root=_root;
+        TERZe=TERZf=TERZeavg=TERZepeak=null;
+        TERZn=0;
+        TERZw=0;
         initPowerTracks();
         reset();
     }
@@ -94,6 +106,12 @@ public class DataConsolidator {
             y=pr.y.clone();
             yavg=pr.yavg.clone();
             ypeak=pr.ypeak.clone();
+            TERZe=pr.terze.clone();
+            TERZeavg=pr.terzeavg.clone();
+            TERZepeak=pr.terzepeak.clone();
+            TERZf=pr.terzf.clone();
+            TERZn=pr.terzf.length;
+            TERZw=pr.terzw;
             for (PowerTrack p:powerTracks) {
                 p.reset();
                 p.add(pr.fres[p.id]);
@@ -109,6 +127,11 @@ public class DataConsolidator {
         yavg=pr.yavg;
         ypeak=pr.ypeak;
         wave=pr.wave;
+        TERZe=pr.terze;
+        TERZf=pr.terzf;
+        TERZeavg=pr.terzeavg;
+        TERZepeak=pr.terzepeak;
+        TERZw=pr.terzw;
 
         for (PowerTrack p:powerTracks)
             p.add(pr.fres[p.id]);

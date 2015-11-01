@@ -52,6 +52,31 @@ FftProcessor::FftProcessor() {
     pxfmin=pxfmax=0;
     pxlog=false;
 
+    TERZn=34;
+    TERZ=(tTerz*)malloc(sizeof(tTerz)*TERZn);
+    TERZf=(float*)malloc(sizeof(float)*TERZn);
+    TERZe=(float*)malloc(sizeof(float)*TERZn);
+    TERZeraw=(float*)malloc(sizeof(float)*TERZn);
+    TERZeavg=(float*)malloc(sizeof(float)*TERZn);
+    TERZepeak=(float*)malloc(sizeof(float)*TERZn);
+
+    float fscl=powf(2.0f,4.0f/12.0f);
+    for (int i=0;i<TERZn;i++) {
+        TERZf[i]=9.843133202f*powf(fscl,i);
+        TERZeraw[i]=0.0f;
+        TERZe[i]=-120.0f;
+        TERZeavg[i]=-120.0f;
+        TERZepeak[i]=-120.0f;
+
+        TERZ[i].f1=9.843133202f*powf(fscl,(float)i-0.5f);
+        TERZ[i].f2=9.843133202f*powf(fscl,(float)i+0.5f);
+        TERZ[i].i1=0;
+        TERZ[i].i2=0;
+        TERZ[i].s1=0.0f;
+        TERZ[i].s2=0.0f;
+        TERZ[i].scale=0.0f;
+    }
+
 }
 
 FftProcessor::~FftProcessor() {
@@ -67,10 +92,65 @@ FftProcessor::~FftProcessor() {
     if (TPIXELS) free(TPIXELS);
     if (ENG) free(ENG);
     if (kiss_cfg) free(kiss_cfg);
+    if (TERZ) free(TERZ);
+    if (TERZe) free(TERZe);
+    if (TERZeraw) free(TERZeraw);
+    if (TERZf) free(TERZf);
+    if (TERZeavg) free(TERZeavg);
+    if (TERZepeak) free(TERZepeak);
+
 
     if (AFILTER) free(AFILTER);
     if (BFILTER) free(BFILTER);
     if (CFILTER) free(CFILTER);
+}
+
+void FftProcessor::buildTerzFilters() {
+    float dF=F[2]-F[1];
+    for (int i=0;i<TERZn;i++) {
+        float f1=TERZ[i].f1;
+        float f2=TERZ[i].f2;
+        int n1=(int)floorf(f1/dF+0.5f);
+        int n2=(int)floorf(f2/dF+0.5f);
+        float c1=(float)n1*dF;
+        float c2=(float)n2*dF;
+        float s1,s2,scale;
+        if (n1 < 1) n1=1;
+        if (n2 < 1) n2=1;
+        if (n1 >= LEN/2) n1=LEN/2-1;
+        if (n2 >= LEN/2) n2=LEN/2-1;
+        float filt=1.0f;
+        switch (TERZw) {
+            case 0: // No filter
+                filt=1.0f;
+                break;
+            case 1: // A
+                filt=powf(10.0f,filter_A_dB(TERZf[i])/10.0f);
+                break;
+            case 2: // B
+                filt=powf(10.0f,filter_B_dB(TERZf[i])/10.0f);
+                break;
+            case 3: // C
+                filt=powf(10.0f,filter_C_dB(TERZf[i])/10.0f);
+                break;
+        }
+        if (n2 == n1) {
+            s1=(f2-f1)/dF;
+            s2=0;
+            n2=-1;
+            scale=filt;
+        } else {
+            // n2 > n1
+            s1=1.0f-((f1-c1)/dF+0.5f);
+            s2=(f2-c2)/dF+0.5f;
+            scale=filt;
+        }
+        TERZ[i].i1=(short)n1;
+        TERZ[i].i2=(short)n2;
+        TERZ[i].s1=s1;
+        TERZ[i].s2=s2;
+        TERZ[i].scale=scale;
+    }
 }
 
 float FftProcessor::filter_A_dB(float f)
@@ -98,15 +178,18 @@ float FftProcessor::filter_C_dB(float f)
 }
 
 void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,float fmin, float fmax,int pixels,
-                           bool logscale) {
+                           bool logscale, int terzweight) {
     bool newsetup=false;
     bool recalcwin=(usewin != window);
     bool newfreq=false;
     bool newscale=false;
+    bool newterz=false;
 
     if ((pxpixels < 1) || (pixels < 1) || (fmin != pxfmin) || (fmax != pxfmax) || (pixels != pxpixels) || (logscale != pxlog))
         newscale=true;
 
+    if (TERZw != terzweight)
+        newterz=true;
 
     if (len != LEN) {
         // New setup
@@ -141,6 +224,7 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
         newsetup=true;
         recalcwin=true;
         newscale=true;
+        newterz=true;
         kiss_cfg=kiss_fftr_alloc(LEN,0,0,0);
     }
     if (recalcwin) {
@@ -233,7 +317,6 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
         }
     }
 
-
     float pmin,pmax;
     float wval;
     wval=(float)data[0]/32768.0f;
@@ -257,23 +340,21 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
             F[i]=(float)i/LEN*FS;
         }
 
-        // Filter
+        // Weighting Filters
         for (int i=0;i<len/2;i++) {
-            float f=F[i];
-
-            // Weighting Filters
-            float RA=powf(10.0f,filter_A_dB(f)/10.0f);
-            float RB=powf(10.0f,filter_B_dB(f)/10.0f);
-            float RC=powf(10.0f,filter_C_dB(f)/10.0f);
-
-            // float RA=(float)(12200.0*12200.0*f*f*f*f/((f*f+20.6*20.6)*(f*f+12200.0*12200.0)*sqrt(f*f+107.7*107.7)*sqrt(f*f+737.9*737.9))*1.258925412);
-            //AFILTER[i]=RA*RA;
-
-            AFILTER[i]=RA;
-            BFILTER[i]=RB;
-            CFILTER[i]=RC;
+            AFILTER[i]=powf(10.0f,filter_A_dB(F[i])/10.0f);
+            BFILTER[i]=powf(10.0f,filter_B_dB(F[i])/10.0f);
+            CFILTER[i]=powf(10.0f,filter_C_dB(F[i])/10.0f);
         }
+
         newscale=true;
+        newterz=true;
+    }
+
+    if (newterz) {
+        // Terz Filters
+        TERZw=terzweight;
+        buildTerzFilters();
     }
 
     if (newfreq || tf != trackf) {
@@ -385,7 +466,8 @@ bool FftProcessor::process() {
     float sumC10k_20k=0.0;
 
     float scalef=powf(10.0f,amplitude_win_scaling/10.0f)*2.0f/(float)(LEN*LEN);
-    float tc=0.05f; // exp(-LEN/128.0f*FS/44100.0f)*0.05;
+    // float tc=0.05f; // exp(-LEN/128.0f*FS/44100.0f)*0.05;
+    float tc=(float)exp(log(LEN)*0.904684-9.951);
     float sumtrack=0.0f;
 
     for (int i=0;i<LEN/2;i++) {
@@ -435,7 +517,6 @@ bool FftProcessor::process() {
         memcpy(YY,Y,sizeof(float)*LEN/2);
         noavg=false;
     }
-    resetpeak=false;
 
     if (pxpixels > 0) {
         for (int i=0;i<pxpixels;i++) {
@@ -451,10 +532,39 @@ bool FftProcessor::process() {
                 default: PV=0;break;
             }
             if (PV < 1e-12) PIXELS[i]=-120;
-            else if (PV > 1) PIXELS[i]=0.0;
+            else if (PV > 1.0f) PIXELS[i]=0.0;
             else PIXELS[i]=10.0f*log10f(PV);
         }
     }
+
+    // Terz Filter Bank
+    for (int i=0;i<TERZn;i++) {
+        float e=0.0f;
+        if (TERZ[i].i2==-1) {
+            e=ENG[TERZ[i].i1]*TERZ[i].s1*TERZ[i].scale;
+        } else {
+            e=ENG[TERZ[i].i1]*TERZ[i].s1+ENG[TERZ[i].i2]*TERZ[i].s2;
+            for (int j=TERZ[i].i1+1;j<TERZ[i].i2;j++)
+                e+=ENG[j];
+            e*=TERZ[i].scale;
+        }
+        TERZeraw[i]=TERZeraw[i]*(1.0f-tc) + tc*e;
+
+        if (e < 1e-14)
+            TERZe[i]=-140.0f;
+        else
+            TERZe[i]=10.0f*log10f(e)-noise_win_scaling;
+        if (TERZeraw[i] < 1e-14)
+            TERZeavg[i]=-140.0f;
+        else
+            TERZeavg[i]=10.0f*log10f(TERZeraw[i])-noise_win_scaling;
+        if (TERZe[i]<-120.0f) TERZe[i]=-120.0f;
+        if (TERZeavg[i]<-120.0f) TERZeavg[i]=-120.0f;
+
+        if (resetpeak || (TERZe[i]>TERZepeak[i])) TERZepeak[i]=TERZe[i];
+    }
+
+    resetpeak=false;
 
     // Window scaling
     FRES[0]=amplitude_win_scaling;
@@ -551,56 +661,43 @@ void FunctionGenerator::calculateBlock(float *inFSWEEP, float *inFM, float *inPM
         return;
     }
     dphi=2.0f*M_PIf*f/(float)fs;
-//     if (inFM || inAM || inPM || inPWM) {
-        for (int i = 0; i < len; i++) {
-            float dphit = 0;
-            float ft=f;
-            float phs=phase;
-            if (inPM) {
-                phs=phs+2*M_PIf*inPM[i];
-                if (phs < 0) phs+=2*M_PIf;
-                if (phs >= 2*M_PIf) phs-=2*M_PIf;
-            }
 
-            if (inPWM) {
-                float pwmt = pwm + inPWM[i];
-                erg[i] = fgen(type, phase, pwmt);
-            } else
-                erg[i] = fgen(type, phase, pwm);
-
-            if (inFSWEEP || inFM) {
-                if (inFSWEEP)
-                    ft=inFSWEEP[i];
-                if (inFM)
-                    ft = ft * (1 + inFM[i]);
-                dphit = 2 * M_PIf * ft / fs;
-            } else
-                dphit=dphi;
-
-            phase += dphit;
-
-            if (phase < 0)
-                phase += 2.0 * M_PIf;
-            if (phase >= 2.0 * M_PIf)
-                phase -= 2.0 * M_PIf;
-
-            if (inAM)
-                erg[i] *= (1.0f+inAM[i]);
-            erg[i]*=gain;
+    for (int i = 0; i < len; i++) {
+        float dphit = 0;
+        float ft=f;
+        float phs=phase;
+        if (inPM) {
+            phs=phs+2*M_PIf*inPM[i];
+            if (phs < 0) phs+=2*M_PIf;
+            if (phs >= 2*M_PIf) phs-=2*M_PIf;
         }
-/*    } else {
-        if (inFSWEEP) {
-            for (int i=0;i<len;i++) {
-                erg[i] = gain * fgen(type, phase, pwm);
-                phase+=2.0f*M_PIf*inFSWEEP[i]/(float)fs;
-            }
-        } else {
-            for (int i=0;i<len;i++) {
-                erg[i] = gain * fgen(type, phase, pwm);
-                phase+=dphi;
-            }
-        }
-    }*/
+
+        if (inPWM) {
+            float pwmt = pwm + inPWM[i];
+            erg[i] = fgen(type, phase, pwmt);
+        } else
+            erg[i] = fgen(type, phase, pwm);
+
+        if (inFSWEEP || inFM) {
+            if (inFSWEEP)
+                ft=inFSWEEP[i];
+            if (inFM)
+                ft = ft * (1 + inFM[i]);
+            dphit = 2 * M_PIf * ft / fs;
+        } else
+            dphit=dphi;
+
+        phase += dphit;
+
+        if (phase < 0)
+            phase += 2.0 * M_PIf;
+        if (phase >= 2.0 * M_PIf)
+            phase -= 2.0 * M_PIf;
+
+        if (inAM)
+            erg[i] *= (1.0f+inAM[i]);
+        erg[i]*=gain;
+    }
 }
 
 void FunctionGenerator::setup(FunctionGeneratorType _type, float _f, float _gain, float _pwm) {
@@ -834,29 +931,45 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalProg(JNIEnv
     return (jboolean)true;
 }
 
+// Wave File Header Generator (is  ore difficult within Java)
+// Integeres have to be stored Little Endian.
 typedef uint8_t RIFFID[4];
 
-typedef struct sWAVEHEADER {
+typedef struct sRIFF_RIFF {
     RIFFID ChunkID;
     uint32_t ChunkSize;
     RIFFID Format;
-    RIFFID SubChunk1ID;
-    uint32_t SubChunk1Size;
+} tRIFF_RIFF;
+
+typedef struct sRIFF_fmt {
+    RIFFID ChunkID;
+    uint32_t ChunkSize;
     uint16_t AudioFormat;
     uint16_t NumChannels;
     uint32_t SampleRate;
     uint32_t ByteRate;
     uint16_t BlockAlign;
     uint16_t BitsPerSample;
-    RIFFID SubChunk2ID;
-    uint32_t SubChunk2Size;
-} tWAVERHEADER;
+} tRIFF_fmt;
+
+typedef struct sRIFF_data {
+    RIFFID ChunkID;
+    uint32_t ChunkSize;
+    // Data follows here
+    uint8_t data[0];
+} tRIFF_data;
+
+typedef struct sWAVEHEADER {
+    tRIFF_RIFF header;
+    tRIFF_fmt format;
+    tRIFF_data data;
+} tWAVEHEADER;
 
 void setRIFF(RIFFID *R, char *id) {
     uint8_t *p=(uint8_t*)R;
     int i=4;
     while (i && *id) {
-        *p=*id;
+        *p=(uint8_t) *id;
         p++;
         id++;
         i--;
@@ -868,29 +981,46 @@ void setRIFF(RIFFID *R, char *id) {
     }
 }
 
-jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt) {
+void setLE_int16(uint16_t *tgt, uint16_t s) {
+    uint8_t *t=(uint8_t *)tgt;
+    *t=(uint8_t) ((uint16_t) s & 0x00FF);t++;
+    *t=(uint8_t) ((uint16_t) (s>>8) & 0x00FF);
+}
+
+void setLE_int32(uint32_t *tgt, uint32_t s) {
+    uint8_t *t=(uint8_t *)tgt;
+    *t=(uint8_t)((uint32_t) s & 0x000000FF);t++;
+    *t=(uint8_t)((uint32_t)(s>>8) & 0x000000FF);t++;
+    *t=(uint8_t)((uint32_t)(s>>16) & 0x000000FF);t++;
+    *t=(uint8_t)((uint32_t)(s>>24) & 0x000000FF);
+}
+
+jint Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt, jint samples) {
+
+    if (env->GetArrayLength(tgt) < sizeof(tWAVEHEADER))
+        return 0;
+
     jbyte *jdata=env->GetByteArrayElements(tgt,0);
+    tWAVEHEADER *whdr=(tWAVEHEADER *) jdata;
 
-    tWAVERHEADER *whdr=(tWAVERHEADER *) jdata;
+    setRIFF(&whdr->header.ChunkID,"RIFF");
+    setLE_int32(&whdr->header.ChunkSize,sizeof(tRIFF_RIFF)-4-4 + sizeof(tRIFF_fmt)+sizeof(tRIFF_data)+samples*2);
+    setRIFF(&whdr->header.Format,"WAVE");
 
-    setRIFF(&whdr->ChunkID,"RIFF");
-    whdr->ChunkSize=0x7FFFFFFF-8;
-    setRIFF(&whdr->Format,"WAVE");
+    setRIFF(&whdr->format.ChunkID,"fmt");
+    setLE_int32(&whdr->format.ChunkSize,sizeof(tRIFF_fmt)-4-4);
+    setLE_int16(&whdr->format.AudioFormat,1);
+    setLE_int16(&whdr->format.NumChannels,1);
+    setLE_int32(&whdr->format.SampleRate,44100);
+    setLE_int32(&whdr->format.ByteRate,44100*2);
+    setLE_int16(&whdr->format.BlockAlign,2);
+    setLE_int16(&whdr->format.BitsPerSample,16);
 
-    setRIFF(&whdr->SubChunk1ID,"fmt");
-    whdr->SubChunk1Size=16;
-    whdr->AudioFormat=1;
-    whdr->NumChannels=1;
-    whdr->SampleRate=44100;
-    whdr->ByteRate=44100*2;
-    whdr->BlockAlign=2;
-    whdr->BitsPerSample=16;
-
-    setRIFF(&whdr->SubChunk2ID,"data");
-    whdr->SubChunk2Size=0x7FFFFFFF-8-16-4;
+    setRIFF(&whdr->data.ChunkID,"data");
+    setLE_int32(&whdr->data.ChunkSize,sizeof(tRIFF_data)-4-4 + (uint32_t)samples*2);
 
     env->ReleaseByteArrayElements(tgt,jdata,0);
-    return (jboolean)true;
+    return sizeof(tWAVEHEADER);
 }
 
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalSource(JNIEnv *env, jobject obj, jshortArray tgt) {
@@ -911,20 +1041,18 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetup
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetData(
         JNIEnv *env, jobject obj,
         jfloat  fs, jint usewin, jfloat trackf, jshortArray data,
-        jfloat fmin, jfloat fmax,jint pixels, jboolean logscale) {
+        jfloat fmin, jfloat fmax,jint pixels, jboolean logscale,
+        jint terzw) {
     if (!fftProcessor) return (jboolean)false;
     jshort *jdata=env->GetShortArrayElements(data,0);
     int len=env->GetArrayLength(data);
-    fftProcessor->setData(len,fs,usewin,trackf,jdata,fmin,fmax,pixels,logscale);
+    fftProcessor->setData(len,fs,usewin,trackf,jdata,fmin,fmax,pixels,logscale,terzw);
     env->ReleaseShortArrayElements(data,jdata,0);
     return (jboolean)true;
 }
 
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorProcess(JNIEnv *env, jobject obj) {
     return (jboolean) (fftProcessor && fftProcessor->process());
-    /*if (fftProcessor && fftProcessor->process())
-        return (jboolean)true;
-    return (jboolean)false;*/
 }
 
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorResetPeak(JNIEnv *env, jobject obj) {
@@ -932,7 +1060,6 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorReset
     fftProcessor->resetpeak=true;
     return (jboolean)true;
 }
-
 
 jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetData(JNIEnv *env, jobject obj,
                                      jint what, jint size) {
@@ -969,6 +1096,18 @@ jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGe
         case 4: // Peak
             env->SetFloatArrayRegion(result,0,fftProcessor->LEN/2,fftProcessor->YPEAK);
             break;
+        case 5: // TerzF
+            env->SetFloatArrayRegion(result,0,fftProcessor->TERZn,fftProcessor->TERZf);
+            break;
+        case 6: // TerzE
+            env->SetFloatArrayRegion(result,0,fftProcessor->TERZn,fftProcessor->TERZe);
+            break;
+        case 7: // TerzEavg
+            env->SetFloatArrayRegion(result,0,fftProcessor->TERZn,fftProcessor->TERZeavg);
+            break;
+        case 8: // TerzEpeak
+            env->SetFloatArrayRegion(result,0,fftProcessor->TERZn,fftProcessor->TERZepeak);
+            break;
         default:
             return NULL; // =env->NewFloatArray(0);
     }
@@ -989,7 +1128,6 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetDa
     switch (what) {
         case 0: // frequency
             // result=env->NewFloatArray(fftProcessor->LEN/2);
-
             //if (result)
             env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->F);
             break;
@@ -1007,6 +1145,18 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetDa
         case 4: // Peak
             env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->YPEAK);
             break;
+        case 5: // TerzF
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->TERZn,size),fftProcessor->TERZf);
+            break;
+        case 6: // TerzE
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->TERZn,size),fftProcessor->TERZe);
+            break;
+        case 7: // TerzEavg
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->TERZn,size),fftProcessor->TERZeavg);
+            break;
+        case 8: // TerzEpeak
+            env->SetFloatArrayRegion(result,0,min(fftProcessor->TERZn,size),fftProcessor->TERZepeak);
+            break;
         default:
             return (jboolean) false; // =env->NewFloatArray(0);
     }
@@ -1019,9 +1169,9 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_WaveViewProcessDa
     if (bmapin == NULL) return (jboolean)false;
     jint *bmap=env->GetIntArrayElements(bmapin,0);
 
-//    memset(bmap,0,width*height*4);
+
+    // Decay
     for (int i=0;i<width*height;i++) {
-//        bmap[i]=0;
         unsigned char *s;
         if (bmap[i] > 0xFF000000) {
             s = (unsigned char *) &bmap[i];

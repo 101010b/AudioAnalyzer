@@ -14,7 +14,8 @@ public class AudioAnalyzerHelper {
 
     public native boolean fftProcessorSetup();
     public native boolean fftProcessorSetData(float fs, int window, float trackf, short data[],
-                                              float fmin, float fmax, int pixels, boolean logscale);
+                                              float fmin, float fmax, int pixels, boolean logscale,
+                                              int terzw);
     public native boolean fftProcessorProcess();
     public native float[]  fftProcessorGetData(int what, int size);
     public native boolean fftProcessorGetDataCopy(float[] result, int what);
@@ -29,8 +30,7 @@ public class AudioAnalyzerHelper {
     public native boolean SignalSetup(int fs);
     public native boolean SignalProg(int param, float value);
     public native boolean SignalSource(short [] erg);
-    public native boolean SignalWavHeader(byte [] header);
-
+    public native int SignalWavHeader(byte [] header, int samples);
 
     // float [] erg=new float[4096];
 
@@ -54,14 +54,14 @@ public class AudioAnalyzerHelper {
             initialized=true;
     }
 
-    boolean fftSetData(float fs, int window, float trackf, short data[]) {
+    boolean fftSetData(float fs, int window, float trackf, int terzw, short data[]) {
         if (!initialized) return false;
         if (specMap != null)
             return fftProcessorSetData(fs,window, trackf, data,
-                    specFmin,specFmax,specMapWidth,specLogScale);
+                    specFmin,specFmax,specMapWidth,specLogScale,terzw);
         else
             return fftProcessorSetData(fs,window, trackf, data,
-                    0,0,0,false);
+                    0,0,0,false,terzw);
     }
 
     boolean fftProcess() {

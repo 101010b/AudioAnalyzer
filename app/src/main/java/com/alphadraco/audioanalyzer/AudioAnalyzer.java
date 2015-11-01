@@ -3,7 +3,6 @@ package com.alphadraco.audioanalyzer;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,13 +12,8 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
-import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.media.audiofx.AcousticEchoCanceler;
-import android.media.audiofx.AutomaticGainControl;
-import android.net.rtp.AudioCodec;
 import android.preference.PreferenceManager;
-// import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -27,28 +21,14 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.SeekBar;
-import android.widget.Spinner;
-import android.widget.SpinnerAdapter;
-import android.widget.Switch;
 import android.widget.TabHost;
-import android.widget.TabWidget;
 import android.widget.TextView;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
@@ -81,6 +61,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     private int fsample=44100;
     private int recms=0;
     private float trackf=-1;
+
+    public int terzw=0;
 
     private int calmode=0;
 
@@ -138,8 +120,6 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         float ofs=0.0f;
         String unit="dBFS";
         String note="direct ADC";
-
-
 
         switch (calmode) {
             default:
@@ -334,8 +314,16 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             bn_speaker.setImageResource(R.mipmap.speaker);
         audioAnalyzerHelper.SignalProg(21,(generator_on)?1.0f:0.0f);
 
-        if (AudioAnalyzerPrefs.getBoolean("DisplayWaterfall",false)) {
-            bn_spec_mode.setImageResource(R.mipmap.spectral_button);
+        switch (spectralView.displayType) {
+            case SPEK:
+                bn_spec_mode.setImageResource(R.mipmap.waterfall_button);
+                break;
+            case WFALL:
+                bn_spec_mode.setImageResource(R.mipmap.terz_button);
+                break;
+            case TERZ:
+                bn_spec_mode.setImageResource(R.mipmap.spectral_button);
+                break;
         }
 
         // StripPlot GUI
@@ -446,15 +434,22 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         bn_spec_mode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (spectralView.displaywaterfall) {
-                    spectralView.displaywaterfall = false;
-                    bn_spec_mode.setImageResource(R.mipmap.waterfall_button);
-                } else {
-                    spectralView.displaywaterfall = true;
-                    bn_spec_mode.setImageResource(R.mipmap.spectral_button);
+                switch (spectralView.displayType) {
+                    case SPEK:
+                        spectralView.displayType=SpectralView.DisplayType.WFALL;
+                        bn_spec_mode.setImageResource(R.mipmap.terz_button);
+                        break;
+                    case WFALL:
+                        spectralView.displayType=SpectralView.DisplayType.TERZ;
+                        bn_spec_mode.setImageResource(R.mipmap.spectral_button);
+                        break;
+                    case TERZ:
+                        spectralView.displayType=SpectralView.DisplayType.SPEK;
+                        bn_spec_mode.setImageResource(R.mipmap.waterfall_button);
+                        break;
                 }
                 SharedPreferences.Editor E = AudioAnalyzerPrefs.edit();
-                E.putBoolean("DisplayWaterfall", spectralView.displaywaterfall);
+                E.putInt("DisplayType", spectralView.displayType.ordinal());
                 E.apply();
             }
         });
@@ -616,7 +611,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
             audioRecord.read(sData, 0, fftsize);
             recms += fftsize;
-            // Dummy Data for Calibration
+            // Dummy Data for numeric Calibration/verification
             /*for (int i=0;i<fftsize;i++) {
                 float t=(float)i/fsample;
                 sData[i]=(short)(32767.0*Math.sin(2*Math.PI*10000*t));
@@ -633,7 +628,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             while ((pb = processBufferList.retrieve()) != null) {
                 trackf=spectralView.trackf;
                 dataConsolidator.trackf=trackf;
-                ProcessResult pr = new ProcessResult(pb, trackf, window);
+                ProcessResult pr = new ProcessResult(pb, trackf, window, terzw);
                 if (resetPeak) audioAnalyzerHelper.fftResetPeak();
                 resetPeak=false;
                 pr.process(audioAnalyzerHelper);

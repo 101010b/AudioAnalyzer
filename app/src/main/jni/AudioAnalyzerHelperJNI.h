@@ -22,6 +22,16 @@ typedef struct s_pixel {
     float scale2;
 } t_pixel;
 
+typedef struct sTerz {
+    float f1;
+    float f2;
+    float scale;
+    short i1;
+    short i2;
+    float s1;
+    float s2;
+} tTerz;
+
 class FftProcessor {
 public:
     float FS;
@@ -61,18 +71,29 @@ public:
     float *PIXELS;
     t_pixel *TPIXELS;
 
+    int TERZn;
+    int TERZw;
+    tTerz *TERZ;
+    float *TERZf;
+    float *TERZe;
+    float *TERZeraw;
+    float *TERZeavg;
+    float *TERZepeak;
+
     kiss_fftr_cfg kiss_cfg;
 
 public:
     FftProcessor();
     ~FftProcessor();
 
+    void buildTerzFilters();
+
     float filter_A_dB(float f);
     float filter_B_dB(float f);
     float filter_C_dB(float f);
 
     void setData(int len, float fs, int window, float tf, short *data,float fmin, float fmax,int pixels,
-                 bool logscale);
+                 bool logscale,int terzw);
     bool process();
 
 };
@@ -177,7 +198,8 @@ JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper
 
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetData(JNIEnv *env, jobject obj,
                                                         jfloat  fs, jint window, jfloat trackf, jshortArray data,
-                                                        jfloat fmin, jfloat fmax, jint pixels, jboolean logscale);
+                                                        jfloat fmin, jfloat fmax, jint pixels, jboolean logscale,
+                                                        jint terzw);
 
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorProcess(JNIEnv *env, jobject obj);
 
@@ -200,7 +222,7 @@ JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalProg(JNIEnv *env, jobject obj, jint param, jfloat value);
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalSource(JNIEnv *env, jobject obj, jshortArray tgt);
 
-JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt);
+JNIEXPORT jint JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt);
 
 }
 

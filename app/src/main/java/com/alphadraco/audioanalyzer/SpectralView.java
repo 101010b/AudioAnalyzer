@@ -5,9 +5,11 @@ import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.graphics.Shader;
 import android.provider.ContactsContract;
 // import android.support.annotation.DimenRes;
 import android.util.AttributeSet;
@@ -22,6 +24,10 @@ import android.widget.PopupMenu;
 /**
  * Created by aladin on 19.09.2015.
  */
+
+
+
+
 public class SpectralView  extends View {
     Paint paint_grid = new Paint();
     Paint paint_gridy = new Paint();
@@ -36,6 +42,9 @@ public class SpectralView  extends View {
     Paint paint_note = new Paint();
     Paint paint_colorBarFrame = new Paint();
     Paint paint_mark=new Paint();
+    Paint paint_bar=null;
+    Paint paint_bar_avg=new Paint();
+    Paint paint_bar_peak=new Paint();
 
 
     Paint textY = new Paint();
@@ -66,7 +75,6 @@ public class SpectralView  extends View {
     float storeLmin,storeLmax;
     float storeFmin,storeFmax;
 
-
     boolean gridredraw;
 
     int xofs,yofs;
@@ -78,10 +86,8 @@ public class SpectralView  extends View {
     int levelBarHeight;
     int buttonFontHeight;
     int buttonHeight;
-
-
-
-    boolean displaywaterfall;
+    public enum DisplayType { SPEK, WFALL, TERZ };
+    DisplayType displayType=DisplayType.SPEK;
     String[] colorTabStrings;
     String colorTabString;
     ColorTable colorTable;
@@ -97,7 +103,8 @@ public class SpectralView  extends View {
     SharedPreferences SpectralPrefs;
     SharedPreferences.OnSharedPreferenceChangeListener PrefListener;
 
-
+    float terzminf;
+    int terzminidx;
 
     public void setPreferences(AudioAnalyzer _rt, SharedPreferences prefs) {
         SpectralPrefs=prefs;
@@ -113,7 +120,8 @@ public class SpectralView  extends View {
             showFFT = SpectralPrefs.getBoolean("SpecDisplayFFT", true);
             trackf = SpectralPrefs.getFloat("TrackF", -1.0f);
             colorTabString = SpectralPrefs.getString("WaterFallColor", colorTabStrings[0]);
-            displaywaterfall=SpectralPrefs.getBoolean("DisplayWaterfall",false);
+            displayType=DisplayType.values()[SpectralPrefs.getInt("DisplayType", 0)];
+            root.terzw=SpectralPrefs.getInt("SpecDisplayTerzW", 0);
             PrefListener=new SharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
@@ -142,7 +150,7 @@ public class SpectralView  extends View {
 
         paint_mark.setColor(Color.BLUE);
         paint_mark.setStyle(Paint.Style.STROKE);
-        paint_mark.setPathEffect(new DashPathEffect(new float[]{20,20}, 0));
+        paint_mark.setPathEffect(new DashPathEffect(new float[]{20, 20}, 0));
         paint_mark.setStrokeWidth(2);
 
         paint_frame.setColor(Color.WHITE);
@@ -159,18 +167,14 @@ public class SpectralView  extends View {
         paint_note.setTextSize(stdsize);
 
         paint_grid.setColor(Color.GRAY);
-        //paint_grid.setPathEffect(new DashPathEffect(new float[]{10, 10}, 0));
         paint_grid.setTextAlign(Paint.Align.CENTER);
         paint_grid.setTextSize(stdsize * 0.75f);
 
         paint_gridy.setColor(Color.GRAY);
-        // paint_gridy.setPathEffect(new DashPathEffect(new float[]{10, 10}, 0));
         paint_gridy.setTextAlign(Paint.Align.LEFT);
         paint_gridy.setTextSize(stdsize * 0.75f);
 
         paint_subgrid.setColor(Color.DKGRAY);
-        // paint_subgrid.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
-
 
         paint_fft.setColor(Color.GREEN);paint_fft.setStyle(Paint.Style.STROKE);
         paint_fft.setTextAlign(Paint.Align.CENTER);
@@ -180,12 +184,22 @@ public class SpectralView  extends View {
         paint_max.setTextAlign(Paint.Align.CENTER);
 
         paint_fft_mark.setColor(Color.GREEN);paint_fft_mark.setStyle(Paint.Style.STROKE);
-        paint_fft_mark.setTextSize(stdsize*0.75f);paint_fft_mark.setTextAlign(Paint.Align.LEFT);
+        paint_fft_mark.setTextSize(stdsize * 0.75f);paint_fft_mark.setTextAlign(Paint.Align.LEFT);
         paint_avg_mark.setColor(Color.GRAY);paint_avg_mark.setStyle(Paint.Style.STROKE);
-        paint_avg_mark.setTextSize(stdsize*0.75f);paint_avg_mark.setTextAlign(Paint.Align.LEFT);
+        paint_avg_mark.setTextSize(stdsize * 0.75f);paint_avg_mark.setTextAlign(Paint.Align.LEFT);
         paint_max_mark.setColor(Color.RED);paint_max_mark.setStyle(Paint.Style.STROKE);
-        paint_max_mark.setTextSize(stdsize*0.75f);paint_max_mark.setTextAlign(Paint.Align.LEFT);
+        paint_max_mark.setTextSize(stdsize * 0.75f);paint_max_mark.setTextAlign(Paint.Align.LEFT);
 
+        paint_bar_avg.setColor(Color.GREEN);
+        paint_bar_avg.setStyle(Paint.Style.FILL);
+        paint_bar_avg.setTextSize(stdsize);
+        paint_bar_avg.setTextAlign(Paint.Align.CENTER);
+
+        paint_bar_peak.setColor(Color.RED);
+        paint_bar_peak.setStyle(Paint.Style.STROKE);
+        // paint_bar_peak.setStyle(Paint.Style.FILL);
+        paint_bar_peak.setTextSize(stdsize);
+        paint_bar_peak.setTextAlign(Paint.Align.CENTER);
 
         textY.setColor(Color.GRAY);
         textY.setTextAlign(Paint.Align.RIGHT);
@@ -215,7 +229,8 @@ public class SpectralView  extends View {
         paint_avg.setTextSize(stdsize);
         paint_fft.setTextSize(stdsize);
 
-        paint_frame.getTextBounds("dBSPL", 0, 5, rct);
+        Sw="dBSPL(C)";
+        paint_frame.getTextBounds(Sw, 0, Sw.length(), rct);
         unitrect=new Rect(rct);
 
         unitrect.offset((int) xofs, 5 + rct.height());
@@ -257,7 +272,7 @@ public class SpectralView  extends View {
 
         line1=line2=line3=null;
 
-        displaywaterfall=false;
+        // displayType=DisplayType.SPEK;
 
     }
 
@@ -308,64 +323,123 @@ public class SpectralView  extends View {
                 // First down
                 PT0X = e.getX(0);
                 PT0Y = e.getY(0);
-                if (displaywaterfall) {
-                    if (PT0Y < levelBarHeight) {
-                        showColorMenu();
-                        return true;
-                    }
-                } else {
-                    if (PT0X > getWidth()-maxrect.width()) {
-                        if (PT0Y < 5 + buttonHeight) {
-                            showPeak = !showPeak;
-                            if (showPeak)
-                                root.dataConsolidator.reset();
-                            SharedPreferences.Editor E=SpectralPrefs.edit();
-                            E.putBoolean("SpecDisplayPeak",showPeak);
-                            E.apply();
+                // Check for active Areas first
+                switch (displayType) {
+                    case WFALL:
+                        // Color Bar
+                        if (PT0Y < levelBarHeight) {
+                            showColorMenu();
                             return true;
-                        } else if (PT0Y < 5 + buttonHeight * 2) {
-                            showAvg = !showAvg;
+                        }
+                        // X-Axis
+                        if (PT0Y > getHeight()-2*yofs) {
+                            islog=!islog;
+                            if (islog && (fmin < 1)) {
+                                fmin = 1;
+                                if (fmax < fmin+100)
+                                    fmax=fmin+100;
+                            }
+                            // Store setup
                             SharedPreferences.Editor E=SpectralPrefs.edit();
-                            E.putBoolean("SpecDisplayAvg",showAvg);
-                            E.apply();
-                            return true;
-                        } else if (PT0Y < 5 + buttonHeight * 3) {
-                            showFFT=!showFFT;
-                            SharedPreferences.Editor E=SpectralPrefs.edit();
-                            E.putBoolean("SpecDisplayFFT",showFFT);
+                            E.putBoolean("SpecDisplayLog",islog);
+                            E.putFloat("LMIN", lmin);
+                            E.putFloat("LMAX",lmax);
+                            E.putFloat("FMIN",fmin);
+                            E.putFloat("FMAX",fmax);
                             E.apply();
                             return true;
                         }
-                    }
-                }
+                        break;
+                    case SPEK:
+                        // Line Selection
+                        if (PT0X > getWidth()-maxrect.width()) {
+                            if (PT0Y < 5 + buttonHeight) {
+                                showPeak = !showPeak;
+                                if (showPeak)
+                                    root.dataConsolidator.reset();
+                                SharedPreferences.Editor E=SpectralPrefs.edit();
+                                E.putBoolean("SpecDisplayPeak",showPeak);
+                                E.apply();
+                                return true;
+                            } else if (PT0Y < 5 + buttonHeight * 2) {
+                                showAvg = !showAvg;
+                                SharedPreferences.Editor E=SpectralPrefs.edit();
+                                E.putBoolean("SpecDisplayAvg",showAvg);
+                                E.apply();
+                                return true;
+                            } else if (PT0Y < 5 + buttonHeight * 3) {
+                                showFFT=!showFFT;
+                                SharedPreferences.Editor E=SpectralPrefs.edit();
+                                E.putBoolean("SpecDisplayFFT",showFFT);
+                                E.apply();
+                                return true;
+                            }
+                        }
+                        // X-Axis
+                        if (PT0Y > getHeight()-2*yofs) {
+                            islog=!islog;
+                            if (islog && (fmin < 1)) {
+                                fmin = 1;
+                                if (fmax < fmin+100)
+                                    fmax=fmin+100;
+                            }
+                            // Store setup
+                            SharedPreferences.Editor E=SpectralPrefs.edit();
+                            E.putBoolean("SpecDisplayLog",islog);
+                            E.putFloat("LMIN", lmin);
+                            E.putFloat("LMAX",lmax);
+                            E.putFloat("FMIN",fmin);
+                            E.putFloat("FMAX",fmax);
+                            E.apply();
+                            return true;
+                        }
+                        break;
+                    case TERZ:
+                        if ((PT0X > unitrect.left) && (PT0X < unitrect.right+40) &&
+                                (PT0Y > 5) && (PT0Y < 5 + buttonHeight)) {
+                            switch (root.terzw) {
+                                case 0: root.terzw=1;break;
+                                case 1: root.terzw=2;break;
+                                case 2: root.terzw=3;break;
+                                case 3: root.terzw=0;break;
+                            }
+                            SharedPreferences.Editor E=SpectralPrefs.edit();
+                            E.putInt("SpecDisplayTerzW",root.terzw);
+                            E.apply();
+                            return true;
+                        } else if (PT0X > getWidth()-maxrect.width()) {
+                            if (PT0Y < 5 + buttonHeight) {
+                                showPeak=!showPeak;
+                                if (showPeak)
+                                    root.dataConsolidator.reset();
+                                SharedPreferences.Editor E=SpectralPrefs.edit();
+                                E.putBoolean("SpecDisplayPeak",showPeak);
+                                E.apply();
+                                return true;
+                            }
+                            if (PT0Y < 5 + buttonHeight * 2) {
+                                showAvg = !showAvg;
+                                SharedPreferences.Editor E=SpectralPrefs.edit();
+                                E.putBoolean("SpecDisplayAvg", showAvg);
+                                E.apply();
+                                return true;
+                            }
+                        }
+                        break;
 
-                if (PT0Y > getHeight()-2*yofs) {
-                    islog=!islog;
-                    if (islog && (fmin < 1)) {
-                        fmin = 1;
-                        if (fmax < fmin+100)
-                            fmax=fmin+100;
-                    }
-                    // Store setup
-                    SharedPreferences.Editor E=SpectralPrefs.edit();
-                    E.putBoolean("SpecDisplayLog",islog);
-                    E.putFloat("LMIN", lmin);
-                    E.putFloat("LMAX",lmax);
-                    E.putFloat("FMIN",fmin);
-                    E.putFloat("FMAX",fmax);
-                    E.apply();
-                    return true;
                 }
-
                 pointers++;
 
-                if (!displaywaterfall && (e.getX() > trackfpos-buttonHeight/2) && (e.getX() < trackfpos+buttonHeight/2)) {
+                // Track Mode
+                if ((displayType == DisplayType.SPEK) && (e.getX() > trackfpos-buttonHeight/2) && (e.getX() < trackfpos+buttonHeight/2)) {
+                    // Special Case: Drag frequency Cursor
                     if (e.getPointerCount() == 1) {
                         trackmode = 1;
                         return true;
                     }
                 }
 
+                // Standard Mode
                 trackmode=0;
                 if (e.getPointerCount()==2) {
                     PT1X=e.getX(1);
@@ -379,11 +453,7 @@ public class SpectralView  extends View {
             case MotionEvent.ACTION_UP:
                 if (pointers==1) {
                     if (trackmode == 1) {
-                        /*if (islog) {
-                            trackf = (float) Math.exp(Math.log(fmin) + (e.getX() - xofs) * (Math.log(fmax) - Math.log(fmin)) / (getWidth() - 1 - xofs - 1));
-                        } else {
-                            trackf = fmin + (e.getX() - xofs) * (fmax - fmin) / (getWidth() - 1 - xofs - 1);
-                        }*/
+                        // Cursor Track
                         SharedPreferences.Editor E = SpectralPrefs.edit();
                         E.putFloat("TrackF", trackf);
                         E.apply();
@@ -404,9 +474,14 @@ public class SpectralView  extends View {
                 pointers=0;
                 break;
 
+
+
             case MotionEvent.ACTION_MOVE:
+                // Break when more than two fingers...
                 if (e.getPointerCount() > 2)
                     pointers=0;
+
+                // Add more pointers?
                 if ((e.getPointerCount()==2) && (pointers == 1)) {
                     if (trackmode == 0) {
                         PT1X = e.getX(1);
@@ -416,25 +491,49 @@ public class SpectralView  extends View {
                         pointers=0; // break it
                     }
                 }
+
                 if (pointers==1) {
+                    // One Finger Track
                     if (trackmode == 0) {
+                        // Move Screen Track
                         float dx = e.getX() - PT0X;
                         float dy = e.getY() - PT0Y;
-                        if (islog) {
-                            float df = (float) (-dx * (Math.log(storeFmax) - Math.log(storeFmin)) / (getWidth() - 1 - xofs - 1));
-                            fmin = (float) Math.exp(Math.log(storeFmin) + df);
-                            fmax = (float) Math.exp(Math.log(storeFmax) + df);
-                        } else {
-                            float df = -dx * (storeFmax - storeFmin) / (getWidth() - 1 - xofs - 1);
-                            fmin = storeFmin + df;
-                            fmax = storeFmax + df;
-                        }
-                        if (!displaywaterfall) {
-                            float dl = dy * (storeLmax - storeLmin) / (getHeight() - 1 - yofs - 1);
-                            lmin = storeLmin + dl;
-                            lmax = storeLmax + dl;
+                        float dl;
+                        switch (displayType) {
+                            case SPEK:
+                                if (islog) {
+                                    float df = (float) (-dx * (Math.log(storeFmax) - Math.log(storeFmin)) / (getWidth() - 1 - xofs - 1));
+                                    fmin = (float) Math.exp(Math.log(storeFmin) + df);
+                                    fmax = (float) Math.exp(Math.log(storeFmax) + df);
+                                } else {
+                                    float df = -dx * (storeFmax - storeFmin) / (getWidth() - 1 - xofs - 1);
+                                    fmin = storeFmin + df;
+                                    fmax = storeFmax + df;
+                                }
+                                dl = dy * (storeLmax - storeLmin) / (getHeight() - 1 - yofs - 1);
+                                lmin = storeLmin + dl;
+                                lmax = storeLmax + dl;
+                                break;
+                            case WFALL:
+                                if (islog) {
+                                    float df = (float) (-dx * (Math.log(storeFmax) - Math.log(storeFmin)) / (getWidth() - 1 - xofs - 1));
+                                    fmin = (float) Math.exp(Math.log(storeFmin) + df);
+                                    fmax = (float) Math.exp(Math.log(storeFmax) + df);
+                                } else {
+                                    float df = -dx * (storeFmax - storeFmin) / (getWidth() - 1 - xofs - 1);
+                                    fmin = storeFmin + df;
+                                    fmax = storeFmax + df;
+                                }
+                                break;
+                            case TERZ:
+                                dl = dy * (storeLmax - storeLmin) / (getHeight() - 1 - yofs - 1);
+                                lmin = storeLmin + dl;
+                                lmax = storeLmax + dl;
+                                paint_bar=null;
+                                break;
                         }
                     } else {
+                        // Move Frequency Cursor
                         float ttf=0;
                         if (islog) {
                             ttf=(float)Math.exp((e.getX()-xofs)/(getWidth() - 1 - xofs)*Math.log(fmax / fmin))*fmin;
@@ -448,42 +547,75 @@ public class SpectralView  extends View {
                         trackf=ttf;
                     }
                 } else if (pointers==2) {
+                    // Two FInger Track
                     if (e.getPointerCount() < 2) {
+                        // Break
                         pointers=0;
-                    } else {
-                        // Two pointers
-                        float x0 = e.getX(0);
-                        float y0 = e.getY(0);
-                        float x1 = e.getX(1);
-                        float y1 = e.getY(1);
-                        float cx0 = (PT0X + PT1X) / 2;
-                        float cy0 = (PT0Y + PT1Y) / 2;
-                        float cx1 = (e.getX(0) + e.getX(1)) / 2;
-                        float cy1 = (e.getY(0) + e.getY(1)) / 2;
-                        if (Math.abs(x1 - x0) > Math.abs(y1 - y0)) {
-                            // horizontal scale and shift
-                            float xscale = (PT1X - PT0X)/(x1 - x0);
-                            float dx = -(cx1 - cx0)/(getWidth()-1-xofs-1);
-                            if (islog) {
-                                fmin = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
-                                        dx * (Math.log(storeFmax) - Math.log(storeFmin))
-                                        - xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
-                                fmax = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
-                                        dx * (Math.log(storeFmax) - Math.log(storeFmin))
-                                        + xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
+                        return true;
+                    }
+                    // Two pointers
+                    float x0 = e.getX(0);
+                    float y0 = e.getY(0);
+                    float x1 = e.getX(1);
+                    float y1 = e.getY(1);
+                    float cx0 = (PT0X + PT1X) / 2;
+                    float cy0 = (PT0Y + PT1Y) / 2;
+                    float cx1 = (e.getX(0) + e.getX(1)) / 2;
+                    float cy1 = (e.getY(0) + e.getY(1)) / 2;
+
+                    switch (displayType) {
+                        case SPEK:
+                            if (Math.abs(x1 - x0) > Math.abs(y1 - y0)) {
+                                // horizontal scale and shift
+                                float xscale = (PT1X - PT0X)/(x1 - x0);
+                                float dx = -(cx1 - cx0)/(getWidth()-1-xofs-1);
+                                if (islog) {
+                                    fmin = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
+                                            dx * (Math.log(storeFmax) - Math.log(storeFmin))
+                                            - xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
+                                    fmax = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
+                                            dx * (Math.log(storeFmax) - Math.log(storeFmin))
+                                            + xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
+                                } else {
+                                    fmin = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) - xscale * (storeFmax - storeFmin) / 2;
+                                    fmax = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) + xscale * (storeFmax - storeFmin) / 2;
+                                }
                             } else {
-                                fmin = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) - xscale * (storeFmax - storeFmin) / 2;
-                                fmax = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) + xscale * (storeFmax - storeFmin) / 2;
-                            }
-                        } else {
-                            if (!displaywaterfall) {
                                 // vertical scale and shift
                                 float yscale = (PT1Y - PT0Y) / (y1 - y0);
                                 float dy = (cy1 - cy0) / (getHeight() - 1 - yofs - 1);
                                 lmin = (storeLmax + storeLmin) / 2 + dy * (storeLmax - storeLmin) - yscale * (storeLmax - storeLmin) / 2;
                                 lmax = (storeLmax + storeLmin) / 2 + dy * (storeLmax - storeLmin) + yscale * (storeLmax - storeLmin) / 2;
                             }
-                        }
+                            break;
+
+                        case WFALL:
+                            if (Math.abs(x1 - x0) > Math.abs(y1 - y0)) {
+                                // horizontal scale and shift
+                                float xscale = (PT1X - PT0X)/(x1 - x0);
+                                float dx = -(cx1 - cx0)/(getWidth()-1-xofs-1);
+                                if (islog) {
+                                    fmin = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
+                                            dx * (Math.log(storeFmax) - Math.log(storeFmin))
+                                            - xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
+                                    fmax = (float)Math.exp((Math.log(storeFmax) + Math.log(storeFmin)) / 2 +
+                                            dx * (Math.log(storeFmax) - Math.log(storeFmin))
+                                            + xscale * (Math.log(storeFmax) - Math.log(storeFmin)) / 2);
+                                } else {
+                                    fmin = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) - xscale * (storeFmax - storeFmin) / 2;
+                                    fmax = (storeFmax + storeFmin) / 2 + dx * (storeFmax - storeFmin) + xscale * (storeFmax - storeFmin) / 2;
+                                }
+                            }
+                            break;
+
+                        case TERZ:
+                            // vertical scale and shift
+                            float yscale = (PT1Y - PT0Y) / (y1 - y0);
+                            float dy = (cy1 - cy0) / (getHeight() - 1 - yofs - 1);
+                            lmin = (storeLmax + storeLmin) / 2 + dy * (storeLmax - storeLmin) - yscale * (storeLmax - storeLmin) / 2;
+                            lmax = (storeLmax + storeLmin) / 2 + dy * (storeLmax - storeLmin) + yscale * (storeLmax - storeLmin) / 2;
+                            paint_bar=null;
+                            break;
                     }
                 }
                 break;
@@ -493,24 +625,35 @@ public class SpectralView  extends View {
 
     public void zoomAll() {
         if (root == null) return;
-        if (islog) {
-            fmin = root.dataConsolidator.f[1];
-            fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
-            if (!displaywaterfall) {
+        switch (displayType) {
+            case SPEK:
+                if (islog) {
+                    fmin = root.dataConsolidator.f[1];
+                    fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
+                } else {
+                    fmin = 0;
+                    fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
+                }
                 lmin = -120;
                 lmax = 0;
-            }
-        } else {
-            fmin = 0;
-            fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
-            if (!displaywaterfall) {
-                lmin = -120;
-                lmax = 0;
-            }
+                break;
+            case WFALL:
+                if (islog) {
+                    fmin = root.dataConsolidator.f[1];
+                    fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
+                } else {
+                    fmin = 0;
+                    fmax = root.dataConsolidator.f[root.dataConsolidator.len / 2 - 1];
+                }
+                break;
+            case TERZ:
+                lmin=-120f;
+                lmax=0;
+                break;
         }
         SharedPreferences.Editor E=SpectralPrefs.edit();
         E.putBoolean("SpecDisplayLog",islog);
-        E.putFloat("LMIN", lmin);
+        E.putFloat("LMIN",lmin);
         E.putFloat("LMAX",lmax);
         E.putFloat("FMIN",fmin);
         E.putFloat("FMAX",fmax);
@@ -542,7 +685,7 @@ public class SpectralView  extends View {
 
     public void changeMode(boolean newmode) {
         if (newmode == islog) return;
-        if (newmode == true) {
+        if (newmode) {
             // Make sure fmin and fmax are set in the right way
             if (fmin <= 0) fmin=10;
             if (fmax <= fmin+100) fmax=fmin+100;
@@ -553,7 +696,7 @@ public class SpectralView  extends View {
 
     private void showColorMenu() {
         if (root==null) return;
-        if (!displaywaterfall) return;
+        if (displayType!=DisplayType.WFALL) return;
         if (root.dataConsolidator==null) return;
         PopupMenu P = new PopupMenu(getContext(),this,Gravity.LEFT+Gravity.FILL_VERTICAL+Gravity.BOTTOM);
         Menu menu = P.getMenu();
@@ -640,7 +783,6 @@ public class SpectralView  extends View {
                 }
             }
         }
-
     }
 
     public void drawGridWaterfall(Canvas canvas, int hofs, int vofs, int width, int height) {
@@ -683,6 +825,26 @@ public class SpectralView  extends View {
 
     }
 
+    public void drawGridTerz(Canvas canvas, int hofs, int vofs, int width, int height) {
+
+        drawFreqGrid(canvas, hofs, vofs, width, height, terzminf, 25298.0f, true);
+
+        float lminX = lmin + ofs;
+        float lmaxX = lmax + ofs;
+
+        int i1 = (int) Math.floor(lminX / 10.0);
+        int i2 = (int) Math.ceil(lmaxX / 10.0);
+        for (int i = i1; i <= i2; i++) {
+            int Y = (int) (vofs + height - 1) - (int) ((i * 10.0 - lminX) * (height - 1) / (lmaxX - lminX));
+            if ((Y >= vofs) && (Y < vofs + height))
+                canvas.drawLine(hofs, Y, hofs+width - 1, Y, paint_grid);
+            if ((Y > fctr) && (Y < height - 1 - yofs - fctr))
+                canvas.drawText(getdBstring(i * 10.0f), xofs - fontspace, Y + fctr / 2, textY);
+        }
+    }
+
+
+
     public void drawGrid(Canvas canvas) {
         int width=canvas.getWidth();
         int height=canvas.getHeight();
@@ -693,58 +855,83 @@ public class SpectralView  extends View {
         int hofs=(int)xofs+1;
         int vofs=1;
 
-        if (displaywaterfall) {
-            gheight=height-(int)yofs-2-levelBarHeight;
-            vofs=1+levelBarHeight;
-            drawGridWaterfall(canvas,hofs,vofs,gwidth,gheight);
-        } else {
-            drawGridSpectrum(canvas, hofs, vofs, gwidth, gheight);
+        switch (displayType) {
+            case SPEK:
+                drawGridSpectrum(canvas, hofs, vofs, gwidth, gheight);
+                break;
+            case WFALL:
+                gheight=height-(int)yofs-2-levelBarHeight;
+                vofs=1+levelBarHeight;
+                drawGridWaterfall(canvas,hofs,vofs,gwidth,gheight);
+                break;
+            case TERZ:
+                drawGridTerz(canvas, hofs, vofs, gwidth, gheight);
+                break;
         }
 
         canvas.drawRect(hofs - 1, vofs - 1, hofs + gwidth - 1 + 1, vofs + gheight - 1 + 1, paint_frame);
         gridredraw=false;
 
         // Unit
-        if (displaywaterfall) {
-            canvas.drawText("s", unitrect.left, unitrect.bottom, paint_frame);
-            if ((colorTable != null) && (colorTable.bar != null)) {
-                int bstart=hofs+hofs;
-                int bstop=hofs+gwidth-1-hofs-hofs;
-                int barwidth=gridfontheight*7/10;
-                int bary1=gridfontheight/2-barwidth/2;
-                int bary2=gridfontheight/2+barwidth/2;
-                Rect sr=new Rect(0,0,colorTable.table.length-1,1);
-                Rect dr=new Rect(bstart,bary1,bstop,bary2);
-                canvas.drawBitmap(colorTable.bar,sr,dr,null);
-                canvas.drawRect(bstart - 1, bary1 - 1, bstop, bary2, paint_colorBarFrame);
-                float lmin=-120+ofs;
-                float lmax=0+ofs;
-                for (float lvl=(float)Math.floor(lmin/10)*10f;lvl < lmax;lvl+=20.0f) {
-                    float x=bstart+(lvl-lmin)*(bstop-bstart)/(lmax-lmin);
-                    if ((x >= bstart) && (x <= bstop)) {
-                        canvas.drawLine(x,bary2,x,bary2+fontspace,paint_gridy);
-                        canvas.drawText(getdBstring(lvl),x,bary2+2*fontspace+gridfontheight,textX);
+        switch (displayType) {
+            case SPEK:
+                canvas.drawText(unit, unitrect.left, unitrect.bottom, paint_frame);
+
+                canvas.drawText("MAX", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2,paint_max);
+                canvas.drawText("AVG", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2+buttonHeight,paint_avg);
+                canvas.drawText("FFT", width - 5 - (maxrect.width() + 15) / 2, 5 + buttonHeight / 2 + buttonFontHeight / 2 + 2 * buttonHeight, paint_fft);
+
+                drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
+                drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + buttonHeight, width - 5, 5 + buttonHeight - 2 + buttonHeight, paint_avg);
+                drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + 2 * buttonHeight, width - 5, 5 + buttonHeight - 2 + 2 * buttonHeight, paint_fft);
+
+                //canvas.drawRect(width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
+                //canvas.drawRect(width - maxrect.width() - 20, 5+2+buttonHeight, width - 5, 5+buttonHeight-2+buttonHeight, paint_avg);
+                //canvas.drawRect(width - maxrect.width() - 20, 5+2+2*buttonHeight, width - 5, 5+buttonHeight-2+2*buttonHeight, paint_fft);
+                break;
+            case WFALL:
+                canvas.drawText("s", unitrect.left, unitrect.bottom, paint_frame);
+                if ((colorTable != null) && (colorTable.bar != null)) {
+                    int bstart=hofs+hofs;
+                    int bstop=hofs+gwidth-1-hofs-hofs;
+                    int barwidth=gridfontheight*7/10;
+                    int bary1=gridfontheight/2-barwidth/2;
+                    int bary2=gridfontheight/2+barwidth/2;
+                    Rect sr=new Rect(0,0,colorTable.table.length-1,1);
+                    Rect dr=new Rect(bstart,bary1,bstop,bary2);
+                    canvas.drawBitmap(colorTable.bar,sr,dr,null);
+                    canvas.drawRect(bstart - 1, bary1 - 1, bstop, bary2, paint_colorBarFrame);
+                    float lmin=-120+ofs;
+                    float lmax=0+ofs;
+                    for (float lvl=(float)Math.floor(lmin/10)*10f;lvl < lmax;lvl+=20.0f) {
+                        float x=bstart+(lvl-lmin)*(bstop-bstart)/(lmax-lmin);
+                        if ((x >= bstart) && (x <= bstop)) {
+                            canvas.drawLine(x,bary2,x,bary2+fontspace,paint_gridy);
+                            canvas.drawText(getdBstring(lvl),x,bary2+2*fontspace+gridfontheight,textX);
+                        }
                     }
+                    canvas.drawText(unit,bstop+fontspace,gridfontheight,textYL);
                 }
-                canvas.drawText(unit,bstop+fontspace,gridfontheight,textYL);
-            }
-        } else {
-            canvas.drawText(unit, unitrect.left, unitrect.bottom, paint_frame);
+                break;
+            case TERZ:
+                String un=unit;
+                switch (root.dataConsolidator.TERZw) {
+                    case 0: break;
+                    case 1: un=un + "(A)";break;
+                    case 2: un=un + "(B)";break;
+                    case 3: un=un + "(C)";break;
+                }
+                drawCornerRect(canvas, unitrect.left+2, 5+2,
+                        unitrect.left+2+unitrect.width()+40, 5 + buttonHeight - 2, paint_frame);
+                canvas.drawText(un, unitrect.left+19, 5+buttonHeight/2+buttonFontHeight/2, paint_frame);
 
-            canvas.drawText("MAX", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2,paint_max);
-            canvas.drawText("AVG", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2+buttonHeight,paint_avg);
-            canvas.drawText("FFT", width - 5 - (maxrect.width() + 15) / 2, 5 + buttonHeight / 2 + buttonFontHeight / 2 + 2 * buttonHeight, paint_fft);
+                canvas.drawText("MAX", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2,paint_bar_peak);
+                canvas.drawText("AVG", width - 5-(maxrect.width()+15)/2, 5+buttonHeight/2+buttonFontHeight/2+buttonHeight,paint_bar_avg);
+                drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_bar_peak);
+                drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + buttonHeight, width - 5, 5 + buttonHeight - 2 + buttonHeight, paint_bar_avg);
 
-            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
-            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + buttonHeight, width - 5, 5 + buttonHeight - 2 + buttonHeight, paint_avg);
-            drawCornerRect(canvas, width - maxrect.width() - 20, 5 + 2 + 2 * buttonHeight, width - 5, 5 + buttonHeight - 2 + 2 * buttonHeight, paint_fft);
-
-            //canvas.drawRect(width - maxrect.width() - 20, 5 + 2, width - 5, 5 + buttonHeight - 2, paint_max);
-            //canvas.drawRect(width - maxrect.width() - 20, 5+2+buttonHeight, width - 5, 5+buttonHeight-2+buttonHeight, paint_avg);
-            //canvas.drawRect(width - maxrect.width() - 20, 5+2+2*buttonHeight, width - 5, 5+buttonHeight-2+2*buttonHeight, paint_fft);
+                break;
         }
-        //canvas.drawText(note,xofs+(width-xofs)/2.0f,unitrect.bottom,paint_note);
-
     }
 
     @Override
@@ -757,216 +944,280 @@ public class SpectralView  extends View {
 
         if ((root.dataConsolidator!=null) && (root.dataConsolidator.f != null) && (root.dataConsolidator.len > 0)) {
 
-            if (displaywaterfall) {
-                if (root.audioAnalyzerHelper != null) {
-                    int wd = (int)width-(int)xofs-2;
-                    int ht = (int)height-(int)yofs-2-levelBarHeight;
-                    boolean renewed=false;
-                    if ((root.audioAnalyzerHelper.specMap == null) ||
-                            (root.audioAnalyzerHelper.specMapWidth != wd) ||
-                            (root.audioAnalyzerHelper.specMapHeight != ht)) {
-                        colorTable = new ColorTable(256,colorTabString);
-                        renewed=true;
-                        root.audioAnalyzerHelper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
+            switch (displayType) {
+                case SPEK:
+                    drawGrid(canvas);
+                    canvas.clipRect(xofs+1,1,width-1-1,height-1-yofs-1);
+
+                    if ((root.audioAnalyzerHelper != null) && (root.audioAnalyzerHelper.specMap != null)) {
+                        root.audioAnalyzerHelper.SpecViewInit(0,0,null,0,0,false);
                     }
-                    if (!renewed && (
-                            (fmin != root.audioAnalyzerHelper.specFmin) || (fmax != root.audioAnalyzerHelper.specFmax) ||
-                            (islog != root.audioAnalyzerHelper.specLogScale) ||
-                            !colorTabString.equals(colorTable.id))) {
-                        if (!colorTabString.equals(colorTable.id)) {
+                    if (trackf > 0) {
+                        trackidx = (int) Math.floor(trackf / root.dataConsolidator.fs * root.dataConsolidator.len + 0.5);
+                    }
+                    int q1, q2, q3;
+                    q1 = q2 = q3 = 0;
+
+                    if ((line1 == null) || (line1.length != (root.dataConsolidator.len / 2 - 1) * 4)) {
+                        line1 = new float[(root.dataConsolidator.f.length - 1) * 4];
+                        line2 = new float[(root.dataConsolidator.f.length - 1) * 4];
+                        line3 = new float[(root.dataConsolidator.f.length - 1) * 4];
+                    }
+                    ;
+
+                    if (islog) {
+                        // Logarithmic
+                        if ((logf == null) || (logf.length != root.dataConsolidator.len / 2) ||
+                                (logf[0] != (float) Math.log(root.dataConsolidator.f[0] / fmin))) {
+                            if ((logf == null) || (logf.length != root.dataConsolidator.len / 2))
+                                logf = new float[root.dataConsolidator.len / 2];
+                            for (int i = 1; i < logf.length; i++)
+                                logf[i] = (float) Math.log(root.dataConsolidator.f[i] / fmin);
+                        }
+                        float logfmaxmin = (float) Math.log(fmax / fmin);
+                        float y = root.dataConsolidator.y[1];
+                        float yavg = root.dataConsolidator.yavg[1];
+                        float ypeak = root.dataConsolidator.ypeak[1];
+                        float X = (float) xofs + (float) (logf[1] / logfmaxmin * (width - 1 - xofs));
+                        float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        if (0 == trackidx) {
+                            if (showPeak) {
+                                canvas.drawCircle(X, Ypeak, 10f, paint_max);
+                                canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                            }
+                            if (showAvg) {
+                                canvas.drawCircle(X, Yavg, 10f, paint_avg);
+                                canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                            }
+                            if (showFFT) {
+                                canvas.drawCircle(X, Y, 10f, paint_fft);
+                                // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
+                            }
+                        }
+                        for (int i = 2; i < logf.length; i++) {
+                            float y2 = root.dataConsolidator.y[i];
+                            float yavg2 = root.dataConsolidator.yavg[i];
+                            float ypeak2 = root.dataConsolidator.ypeak[i];
+                            float X2 = (float) xofs + (float) (logf[i] / logfmaxmin * (width - 1 - xofs));
+                            float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            float Ypeak2 = (height - 1 - yofs) - (ypeak2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            line1[q1++] = X;
+                            line1[q1++] = Y;
+                            line1[q1++] = X2;
+                            line1[q1++] = Y2;
+                            line2[q2++] = X;
+                            line2[q2++] = Ypeak;
+                            line2[q2++] = X2;
+                            line2[q2++] = Ypeak2;
+                            line3[q3++] = X;
+                            line3[q3++] = Yavg;
+                            line3[q3++] = X2;
+                            line3[q3++] = Yavg2;
+
+                            //if (showPeak) canvas.drawLine(X, Ypeak, X2, Ypeak2, paint_max);
+                            //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
+                            //canvas.drawLine(X, Y, X2, Y2, paint_fft);
+                            if (i == trackidx) {
+                                if (showPeak) {
+                                    canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
+                                    canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                                }
+                                if (showAvg)  {
+                                    canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
+                                    canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                                }
+                                if (showFFT) {
+                                    canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                                    // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
+                                }
+                            }
+                            X = X2;
+                            Y = Y2;
+                            Yavg = Yavg2;
+                            Ypeak = Ypeak2;
+                        }
+                        X = (float) xofs + (float) (Math.log(trackf/fmin) / logfmaxmin * (width - 1 - xofs));
+                        trackfPath.reset();
+                        trackfPath.moveTo(X, gridfontheight);
+                        trackfPath.lineTo(X, height - 1 - yofs - gridfontheight);
+                        canvas.drawPath(trackfPath, paint_mark);
+                        // canvas.drawLine(X,gridfontheight,X,height-1-yofs-gridfontheight,paint_mark);
+                    } else {
+                        // Linear
+                        float f = root.dataConsolidator.f[1];
+                        float y = root.dataConsolidator.y[1];
+                        float yavg = root.dataConsolidator.yavg[1];
+                        float ypeak = root.dataConsolidator.ypeak[1];
+                        float X = (float) xofs + (float) ((f - fmin) / (fmax - fmin) * (width - 1 - xofs));
+                        float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        if (0 == trackidx) {
+                            if (showPeak) {
+                                canvas.drawCircle(X, Ypeak, 10f, paint_max);
+                                canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                            }
+                            if (showAvg) {
+                                canvas.drawCircle(X, Yavg, 10f, paint_avg);
+                                canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                            }
+                            if (showFFT) {
+                                canvas.drawCircle(X, Y, 10f, paint_fft);
+                                // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
+                            }
+                        }
+                        for (int i = 2; i < root.dataConsolidator.len / 2; i++) {
+                            float f2 = root.dataConsolidator.f[i];
+                            float y2 = root.dataConsolidator.y[i];
+                            float yavg2 = root.dataConsolidator.yavg[i];
+                            float ypeak2 = root.dataConsolidator.ypeak[i];
+                            float X2 = (float) xofs + (float) ((f2 - fmin) / (fmax - fmin) * (width - 1 - xofs));
+                            float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            float Ypeak2 = (height - 1 - yofs) - (ypeak2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            line1[q1++] = X;
+                            line1[q1++] = Y;
+                            line1[q1++] = X2;
+                            line1[q1++] = Y2;
+                            line2[q2++] = X;
+                            line2[q2++] = Ypeak;
+                            line2[q2++] = X2;
+                            line2[q2++] = Ypeak2;
+                            line3[q3++] = X;
+                            line3[q3++] = Yavg;
+                            line3[q3++] = X2;
+                            line3[q3++] = Yavg2;
+                            //if (showPeak) canvas.drawLine(X, Ypeak, X2, Ypeak2, paint_max);
+                            //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
+                            //canvas.drawLine(X, Y, X2, Y2, paint_fft);
+                            if (i == trackidx) {
+                                if (showPeak) {
+                                    canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
+                                    canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                                }
+                                if (showAvg)  {
+                                    canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
+                                    canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                                }
+                                if (showFFT) {
+                                    canvas.drawCircle(X2, Y2, 10f, paint_fft);
+                                    // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
+                                }
+                            }
+                            X = X2;
+                            Y = Y2;
+                            Yavg = Yavg2;
+                            Ypeak = Ypeak2;
+                        }
+                        X = (float) xofs + (float) ((trackf - fmin) / (fmax - fmin) * (width - 1 - xofs));
+                        trackfPath.reset();
+                        trackfPath.moveTo(X, gridfontheight);
+                        trackfPath.lineTo(X, height - 1 - yofs - gridfontheight);
+                        canvas.drawPath(trackfPath, paint_mark);
+                        // canvas.drawLine(X,gridfontheight,X,height-1-yofs-gridfontheight,paint_mark);
+                    }
+                    if (showPeak) canvas.drawLines(line2, paint_max);
+                    if (showAvg) canvas.drawLines(line3, paint_avg);
+                    if (showFFT) canvas.drawLines(line1, paint_fft);
+                    break;
+                case WFALL:
+                    if (root.audioAnalyzerHelper != null) {
+                        int wd = (int)width-(int)xofs-2;
+                        int ht = (int)height-(int)yofs-2-levelBarHeight;
+                        boolean renewed=false;
+                        if ((root.audioAnalyzerHelper.specMap == null) ||
+                                (root.audioAnalyzerHelper.specMapWidth != wd) ||
+                                (root.audioAnalyzerHelper.specMapHeight != ht)) {
                             colorTable = new ColorTable(256,colorTabString);
+                            renewed=true;
                             root.audioAnalyzerHelper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
-                        } else
-                            root.audioAnalyzerHelper.SpecViewInit(wd, ht, null, fmin, fmax, islog);
-                    }
+                        }
+                        if (!renewed && (
+                                (fmin != root.audioAnalyzerHelper.specFmin) || (fmax != root.audioAnalyzerHelper.specFmax) ||
+                                        (islog != root.audioAnalyzerHelper.specLogScale) ||
+                                        !colorTabString.equals(colorTable.id))) {
+                            if (!colorTabString.equals(colorTable.id)) {
+                                colorTable = new ColorTable(256,colorTabString);
+                                root.audioAnalyzerHelper.SpecViewInit(wd, ht, colorTable.table, fmin, fmax, islog);
+                            } else
+                                root.audioAnalyzerHelper.SpecViewInit(wd, ht, null, fmin, fmax, islog);
+                        }
 
-                    root.audioAnalyzerHelper.fftCopySpecMaptoBitmap();
-                    canvas.drawBitmap(root.audioAnalyzerHelper.specMap, xofs + 1, 1 + levelBarHeight, null);
-                }
-                drawGrid(canvas);
-            } else {
-                drawGrid(canvas);
-                canvas.clipRect(xofs+1,1,width-1-1,height-1-yofs-1);
-
-                if ((root.audioAnalyzerHelper != null) && (root.audioAnalyzerHelper.specMap != null)) {
-                    root.audioAnalyzerHelper.SpecViewInit(0,0,null,0,0,false);
-                }
-                if (trackf > 0) {
-                    trackidx = (int) Math.floor(trackf / root.dataConsolidator.fs * root.dataConsolidator.len + 0.5);
-                }
-                int q1, q2, q3;
-                q1 = q2 = q3 = 0;
-
-                if ((line1 == null) || (line1.length != (root.dataConsolidator.len / 2 - 1) * 4)) {
-                    line1 = new float[(root.dataConsolidator.f.length - 1) * 4];
-                    line2 = new float[(root.dataConsolidator.f.length - 1) * 4];
-                    line3 = new float[(root.dataConsolidator.f.length - 1) * 4];
-                }
-                ;
-
-                if (islog) {
-                    // Logarithmic
-                    if ((logf == null) || (logf.length != root.dataConsolidator.len / 2) ||
-                            (logf[0] != (float) Math.log(root.dataConsolidator.f[0] / fmin))) {
-                        if ((logf == null) || (logf.length != root.dataConsolidator.len / 2))
-                            logf = new float[root.dataConsolidator.len / 2];
-                        for (int i = 1; i < logf.length; i++)
-                            logf[i] = (float) Math.log(root.dataConsolidator.f[i] / fmin);
+                        root.audioAnalyzerHelper.fftCopySpecMaptoBitmap();
+                        canvas.drawBitmap(root.audioAnalyzerHelper.specMap, xofs + 1, 1 + levelBarHeight, null);
                     }
-                    float logfmaxmin = (float) Math.log(fmax / fmin);
-                    float y = root.dataConsolidator.y[1];
-                    float yavg = root.dataConsolidator.yavg[1];
-                    float ypeak = root.dataConsolidator.ypeak[1];
-                    float X = (float) xofs + (float) (logf[1] / logfmaxmin * (width - 1 - xofs));
-                    float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    if (0 == trackidx) {
-                        if (showPeak) {
-                            canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                            canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
-                        }
-                        if (showAvg) {
-                            canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                            canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
-                        }
-                        if (showFFT) {
-                            canvas.drawCircle(X, Y, 10f, paint_fft);
-                            // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
-                        }
+                    drawGrid(canvas);
+                    break;
+                case TERZ:
+                    if (paint_bar == null) {
+                        int[] colors={Color.argb(255,128,0,0),
+                                    Color.argb(255,255,0,0),
+                                    Color.argb(255,255,255,0)};
+                        float[] positions={0,0.25f,1.0f};
+                        paint_bar=new Paint();
+                        // paint_bar.setColor(Color.GREEN);
+                        float y1=(height - 1 - yofs) - (-120.0f - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        float y2=(height - 1 - yofs) - (0.0f - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        paint_bar.setShader(new LinearGradient(0,y1,0,y2,colors,positions, Shader.TileMode.CLAMP));
+                        // Color.argb(255,255,0,0),Color.argb(255, 255, 255, 0), Shader.TileMode.CLAMP));
+                        paint_bar.setStyle(Paint.Style.FILL);
                     }
-                    for (int i = 2; i < logf.length; i++) {
-                        float y2 = root.dataConsolidator.y[i];
-                        float yavg2 = root.dataConsolidator.yavg[i];
-                        float ypeak2 = root.dataConsolidator.ypeak[i];
-                        float X2 = (float) xofs + (float) (logf[i] / logfmaxmin * (width - 1 - xofs));
-                        float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        float Ypeak2 = (height - 1 - yofs) - (ypeak2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        line1[q1++] = X;
-                        line1[q1++] = Y;
-                        line1[q1++] = X2;
-                        line1[q1++] = Y2;
-                        line2[q2++] = X;
-                        line2[q2++] = Ypeak;
-                        line2[q2++] = X2;
-                        line2[q2++] = Ypeak2;
-                        line3[q3++] = X;
-                        line3[q3++] = Yavg;
-                        line3[q3++] = X2;
-                        line3[q3++] = Yavg2;
-
-                        //if (showPeak) canvas.drawLine(X, Ypeak, X2, Ypeak2, paint_max);
-                        //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
-                        //canvas.drawLine(X, Y, X2, Y2, paint_fft);
-                        if (i == trackidx) {
-                            if (showPeak) {
-                                canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                                canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
-                            }
-                            if (showAvg)  {
-                                canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                                canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
-                            }
-                            if (showFFT) {
-                                canvas.drawCircle(X2, Y2, 10f, paint_fft);
-                                // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
-                            }
+                    float fftmin=(float)root.dataConsolidator.fs/root.dataConsolidator.len;
+                    terzminidx=(int)Math.floor(3.0*Math.log(fftmin/500.0)/Math.log(2.0)+17);
+                    if (terzminidx < 0) terzminidx=0;
+                    terzminf=(float)(500.0*Math.pow(2.0,(terzminidx-17-1)/3.0));
+                    drawGrid(canvas);
+                    canvas.clipRect(xofs+1,1,width-1-1,height-1-yofs-1);
+                    int N=root.dataConsolidator.TERZn-terzminidx;
+                    float bw=1.0f* (width - 1 - xofs)/((float)N+1.0f);
+                    if (showPeak) {
+                        if ((line1==null) || (line1.length < (N-1)*4))
+                            line1=new float[(N-1)*4];
+                        float X1=(float) xofs + (float)(0+1.0f) * (width - 1 - xofs)/(N+1);
+                        float Y1 = (height - 1 - yofs) - (root.dataConsolidator.TERZepeak[terzminidx] - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                        for (int i=terzminidx+1;i<root.dataConsolidator.TERZn;i++) {
+                            float X2=(float) xofs + (float)(i-terzminidx+1.0f) * (width - 1 - xofs)/(N+1);
+                            float Y2 = (height - 1 - yofs) - (root.dataConsolidator.TERZepeak[i] - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            line1[(i-terzminidx-1)*4+0]=X1;
+                            line1[(i-terzminidx-1)*4+1]=Y1;
+                            line1[(i-terzminidx-1)*4+2]=X2;
+                            line1[(i-terzminidx-1)*4+3]=Y2;
+                            X1=X2;
+                            Y1=Y2;
                         }
-                        X = X2;
-                        Y = Y2;
-                        Yavg = Yavg2;
-                        Ypeak = Ypeak2;
+                        canvas.drawLines(line1,0,(N-1)*4,paint_max);
                     }
-                    X = (float) xofs + (float) (Math.log(trackf/fmin) / logfmaxmin * (width - 1 - xofs));
-                    trackfPath.reset();
-                    trackfPath.moveTo(X, gridfontheight);
-                    trackfPath.lineTo(X, height - 1 - yofs - gridfontheight);
-                    canvas.drawPath(trackfPath, paint_mark);
-                    // canvas.drawLine(X,gridfontheight,X,height-1-yofs-gridfontheight,paint_mark);
-                } else {
-                    // Linear
-                    float f = root.dataConsolidator.f[1];
-                    float y = root.dataConsolidator.y[1];
-                    float yavg = root.dataConsolidator.yavg[1];
-                    float ypeak = root.dataConsolidator.ypeak[1];
-                    float X = (float) xofs + (float) ((f - fmin) / (fmax - fmin) * (width - 1 - xofs));
-                    float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                    if (0 == trackidx) {
-                        if (showPeak) {
-                            canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                            canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                    for (int i=terzminidx;i<root.dataConsolidator.TERZn;i++) {
+                        float X=(float) xofs + (float)(i-terzminidx+1.0f) * (width - 1 - xofs)/(N+1);
+                        float X1 = X - bw*0.2f;
+                        float X2 = X + bw*0.2f;
+                        float y=root.dataConsolidator.TERZe[i];
+                        if (y > lmin) {
+                            float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            canvas.drawRect(X1,Y,X2,height-1-yofs,paint_bar);
                         }
-                        if (showAvg) {
-                            canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                            canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                        X1 = X - bw*0.4f;
+                        X2 = X + bw*0.4f;
+                        y=root.dataConsolidator.TERZeavg[i];
+                        if ((y > lmin) && showAvg) {
+                            float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            canvas.drawRect(X1,Y,X2,Y+5.0f,paint_bar_avg);
                         }
-                        if (showFFT) {
-                            canvas.drawCircle(X, Y, 10f, paint_fft);
-                            // canvas.drawText(getdBstringx(y),X,Y,paint_fft_mark);
-                        }
+                        /*
+                        y=root.dataConsolidator.TERZepeak[i];
+                        if (y > lmin) {
+                            float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
+                            canvas.drawLine(X1,Y-bw/2,X,Y,paint_max);
+                            canvas.drawLine(X, Y, X2, Y - bw / 2, paint_max);
+                        }*/
                     }
-                    for (int i = 2; i < root.dataConsolidator.len / 2; i++) {
-                        float f2 = root.dataConsolidator.f[i];
-                        float y2 = root.dataConsolidator.y[i];
-                        float yavg2 = root.dataConsolidator.yavg[i];
-                        float ypeak2 = root.dataConsolidator.ypeak[i];
-                        float X2 = (float) xofs + (float) ((f2 - fmin) / (fmax - fmin) * (width - 1 - xofs));
-                        float Y2 = (height - 1 - yofs) - (y2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        float Yavg2 = (height - 1 - yofs) - (yavg2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        float Ypeak2 = (height - 1 - yofs) - (ypeak2 - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        line1[q1++] = X;
-                        line1[q1++] = Y;
-                        line1[q1++] = X2;
-                        line1[q1++] = Y2;
-                        line2[q2++] = X;
-                        line2[q2++] = Ypeak;
-                        line2[q2++] = X2;
-                        line2[q2++] = Ypeak2;
-                        line3[q3++] = X;
-                        line3[q3++] = Yavg;
-                        line3[q3++] = X2;
-                        line3[q3++] = Yavg2;
-                        //if (showPeak) canvas.drawLine(X, Ypeak, X2, Ypeak2, paint_max);
-                        //if (showAvg) canvas.drawLine(X, Yavg, X2, Yavg2, paint_avg);
-                        //canvas.drawLine(X, Y, X2, Y2, paint_fft);
-                        if (i == trackidx) {
-                            if (showPeak) {
-                                canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                                canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
-                            }
-                            if (showAvg)  {
-                                canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                                canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
-                            }
-                            if (showFFT) {
-                                canvas.drawCircle(X2, Y2, 10f, paint_fft);
-                                // canvas.drawText(getdBstringx(y2), X2, Y2, paint_fft_mark);
-                            }
-                        }
-                        X = X2;
-                        Y = Y2;
-                        Yavg = Yavg2;
-                        Ypeak = Ypeak2;
-                    }
-                    X = (float) xofs + (float) ((trackf - fmin) / (fmax - fmin) * (width - 1 - xofs));
-                    trackfPath.reset();
-                    trackfPath.moveTo(X, gridfontheight);
-                    trackfPath.lineTo(X, height - 1 - yofs - gridfontheight);
-                    canvas.drawPath(trackfPath, paint_mark);
-                    // canvas.drawLine(X,gridfontheight,X,height-1-yofs-gridfontheight,paint_mark);
-                }
-                if (showPeak) canvas.drawLines(line2, paint_max);
-                if (showAvg) canvas.drawLines(line3, paint_avg);
-                if (showFFT) canvas.drawLines(line1, paint_fft);
+                    break;
             }
-            canvas.clipRect(0,0,width-1,height-1);
+            canvas.clipRect(0, 0, width - 1, height - 1);
         }
-
-        //    canvas.drawLine(0, 0, width-1, height-1, paint);
-        //    canvas.drawLine(width-1, 0, 0, height-1, paint);
     }
 
     public void display() {
