@@ -982,14 +982,14 @@ public class SpectralView  extends View {
                         float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        if (0 == trackidx) {
+                        if (1 == trackidx) {
                             if (showPeak) {
                                 canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                                canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                                canvas.drawText(getdBstringx(ypeak+ofs),X,Ypeak,paint_max_mark);
                             }
                             if (showAvg) {
                                 canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                                canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                                canvas.drawText(getdBstringx(yavg+ofs),X,Yavg,paint_avg_mark);
                             }
                             if (showFFT) {
                                 canvas.drawCircle(X, Y, 10f, paint_fft);
@@ -1023,11 +1023,11 @@ public class SpectralView  extends View {
                             if (i == trackidx) {
                                 if (showPeak) {
                                     canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                                    canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                                    canvas.drawText(getdBstringx(ypeak2+ofs), X2, Ypeak2, paint_max_mark);
                                 }
                                 if (showAvg)  {
                                     canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                                    canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                                    canvas.drawText(getdBstringx(yavg2+ofs), X2, Yavg2, paint_avg_mark);
                                 }
                                 if (showFFT) {
                                     canvas.drawCircle(X2, Y2, 10f, paint_fft);
@@ -1055,14 +1055,14 @@ public class SpectralView  extends View {
                         float Y = (height - 1 - yofs) - (y - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Yavg = (height - 1 - yofs) - (yavg - lmin) / (lmax - lmin) * (height - 1 - yofs);
                         float Ypeak = (height - 1 - yofs) - (ypeak - lmin) / (lmax - lmin) * (height - 1 - yofs);
-                        if (0 == trackidx) {
+                        if (1 == trackidx) {
                             if (showPeak) {
                                 canvas.drawCircle(X, Ypeak, 10f, paint_max);
-                                canvas.drawText(getdBstringx(ypeak),X,Ypeak,paint_max_mark);
+                                canvas.drawText(getdBstringx(ypeak+ofs),X,Ypeak,paint_max_mark);
                             }
                             if (showAvg) {
                                 canvas.drawCircle(X, Yavg, 10f, paint_avg);
-                                canvas.drawText(getdBstringx(yavg),X,Yavg,paint_avg_mark);
+                                canvas.drawText(getdBstringx(yavg+ofs),X,Yavg,paint_avg_mark);
                             }
                             if (showFFT) {
                                 canvas.drawCircle(X, Y, 10f, paint_fft);
@@ -1096,11 +1096,11 @@ public class SpectralView  extends View {
                             if (i == trackidx) {
                                 if (showPeak) {
                                     canvas.drawCircle(X2, Ypeak2, 10f, paint_max);
-                                    canvas.drawText(getdBstringx(ypeak2), X2, Ypeak2, paint_max_mark);
+                                    canvas.drawText(getdBstringx(ypeak2+ofs), X2, Ypeak2, paint_max_mark);
                                 }
                                 if (showAvg)  {
                                     canvas.drawCircle(X2, Yavg2, 10f, paint_avg);
-                                    canvas.drawText(getdBstringx(yavg2), X2, Yavg2, paint_avg_mark);
+                                    canvas.drawText(getdBstringx(yavg2+ofs), X2, Yavg2, paint_avg_mark);
                                 }
                                 if (showFFT) {
                                     canvas.drawCircle(X2, Y2, 10f, paint_fft);

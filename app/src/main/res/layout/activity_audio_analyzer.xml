@@ -48,6 +48,14 @@
                 <ImageButton
                     android:layout_width="40dp"
                     android:layout_height="40dp"
+                    android:id="@+id/bn_rp_save"
+                    android:padding="0dp"
+                    android:background="@android:color/black"
+                    android:src="@mipmap/record"
+                    android:scaleType="fitXY" />
+                <ImageButton
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:id="@+id/bn_show_menu"
                     android:padding="0dp"
                     android:background="@android:color/black"
@@ -79,6 +87,20 @@
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     layout="@layout/fragment_signal_generator" >
+                </include>
+
+                <include
+                    android:id="@+id/sweep"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    layout="@layout/fragment_sweep_tester" >
+                </include>
+
+                <include
+                    android:id="@+id/report"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    layout="@layout/fragment_signal_report" >
                 </include>
 
             </FrameLayout>

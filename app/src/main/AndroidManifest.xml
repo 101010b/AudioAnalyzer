@@ -21,8 +21,12 @@
         <activity android:name=".AudioAnalyzerSettings"
             android:screenOrientation="userPortrait">
         </activity>
+        <activity android:name=".SweepSettings"
+            android:screenOrientation="userPortrait">
+        </activity>
     </application>
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
 </manifest>

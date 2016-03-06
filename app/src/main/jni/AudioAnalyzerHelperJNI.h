@@ -57,6 +57,7 @@ public:
     float *FRES;
     float pkval;
     float trackf;
+    float trackf2;
     int trackint0,trackint1,trackint2;
 
     int window;
@@ -175,6 +176,13 @@ public:
     bool PWMon;
     bool ADD;
 
+    bool addsine;
+    float addamp;
+    float addfreq;
+    float addadd;
+    float addt;
+
+
     FunctionGenerator *FG,*FMOD;
     SweepGenerator *SG;
 
@@ -197,7 +205,7 @@ extern "C" {
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetup(JNIEnv *env, jobject obj);
 
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetData(JNIEnv *env, jobject obj,
-                                                        jfloat  fs, jint window, jfloat trackf, jshortArray data,
+                                                        jfloat  fs, jint window, jfloat trackf, jshortArray data, jint len,
                                                         jfloat fmin, jfloat fmax, jint pixels, jboolean logscale,
                                                         jint terzw);
 
@@ -222,7 +230,8 @@ JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalProg(JNIEnv *env, jobject obj, jint param, jfloat value);
 JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalSource(JNIEnv *env, jobject obj, jshortArray tgt);
 
-JNIEXPORT jint JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt);
+JNIEXPORT jint JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEnv *env, jobject obj, jbyteArray tgt, jint samples);
+JNIEXPORT jboolean JNICALL Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavData(JNIEnv *env, jobject obj, jshortArray src, jbyteArray tgt);
 
 }
 

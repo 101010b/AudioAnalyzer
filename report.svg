@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="96"
+   height="96"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   inkscape:export-filename="D:\aladin\AndroidStudioProjects\AudioAnalyzer\report.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   sodipodi:docname="report.svg">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4696">
+      <stop
+         style="stop-color:#00ff34;stop-opacity:1;"
+         offset="0"
+         id="stop4698" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="1"
+         id="stop4700" />
+    </linearGradient>
+    <filter
+       inkscape:menu-tooltip="In and out glow with a possible offset and colorizable flood"
+       inkscape:menu="Shadows and Glows"
+       inkscape:label="Cutout Glow"
+       style="color-interpolation-filters:sRGB"
+       id="filter4770"
+       x="-0.18000001"
+       y="-0.18000001"
+       width="1.36"
+       height="1.36">
+      <feOffset
+         dy="0"
+         dx="0"
+         id="feOffset4772" />
+      <feGaussianBlur
+         stdDeviation="6"
+         result="blur"
+         id="feGaussianBlur4774" />
+      <feFlood
+         flood-color="rgb(0,0,0)"
+         flood-opacity="1"
+         result="flood"
+         id="feFlood4776" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite"
+         id="feComposite4778" />
+      <feBlend
+         in="blur"
+         in2="composite"
+         mode="normal"
+         id="feBlend4780" />
+    </filter>
+    <filter
+       inkscape:menu-tooltip="In and out glow with a possible offset and colorizable flood"
+       inkscape:menu="Shadows and Glows"
+       inkscape:label="Cutout Glow"
+       style="color-interpolation-filters:sRGB"
+       id="filter4770-7"
+       x="-0.18000001"
+       y="-0.18000001"
+       width="1.36"
+       height="1.36">
+      <feOffset
+         dy="0"
+         dx="0"
+         id="feOffset4772-6" />
+      <feGaussianBlur
+         stdDeviation="6"
+         result="blur"
+         id="feGaussianBlur4774-3" />
+      <feFlood
+         flood-color="rgb(0,0,0)"
+         flood-opacity="1"
+         result="flood"
+         id="feFlood4776-4" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite"
+         id="feComposite4778-1" />
+      <feBlend
+         in="blur"
+         in2="composite"
+         mode="normal"
+         id="feBlend4780-0" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="5.6"
+     inkscape:cx="66.27232"
+     inkscape:cy="30.852973"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1479"
+     inkscape:window-height="1957"
+     inkscape:window-x="97"
+     inkscape:window-y="81"
+     inkscape:window-maximized="0"
+     showguides="false" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-956.36218)">
+    <g
+       transform="translate(0,-2.5505371e-5)"
+       id="g4782">
+      <rect
+         y="956.36218"
+         x="0"
+         height="96"
+         width="96"
+         id="rect4741"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <rect
+         y="969.05225"
+         x="12.690041"
+         height="70.619919"
+         width="70.619919"
+         id="rect4741-5"
+         style="fill:#00ff00;fill-opacity:1;stroke:none;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;filter:url(#filter4770)" />
+    </g>
+    <g
+       id="g4202"
+       transform="translate(2.5253814,1.767767)">
+      <rect
+         y="981.2735"
+         x="22.779297"
+         height="44.19244"
+         width="3.2812648"
+         id="rect4155"
+         style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.10173085;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <rect
+         y="981.2735"
+         x="63.690472"
+         height="44.19244"
+         width="3.2812648"
+         id="rect4155-9"
+         style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.10173085;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <rect
+         transform="matrix(0,-1,1,0,0,0)"
+         y="22.779297"
+         x="-984.55475"
+         height="44.19244"
+         width="3.2812648"
+         id="rect4155-9-9"
+         style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.10173085;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <rect
+         transform="matrix(0,-1,1,0,0,0)"
+         y="22.779297"
+         x="-1025.4659"
+         height="44.19244"
+         width="3.2812648"
+         id="rect4155-9-9-7"
+         style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.10173085;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+    </g>
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.04897759;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4746"
+       width="5.7653089"
+       height="16.836737"
+       x="34.43877"
+       y="1009.1225" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.07991455;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4746-2"
+       width="15.37723"
+       height="16.805801"
+       x="45.436382"
+       y="1009.1379" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:#ff0000;stroke-width:0.03629391;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4746-2-6"
+       width="15.420851"
+       height="3.4565649"
+       x="38.718147"
+       y="1009.1161" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:13.70010853px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="34.819729"
+       y="873.95605"
+       id="text4778"
+       sodipodi:linespacing="125%"
+       transform="scale(0.87361958,1.144663)"><tspan
+         sodipodi:role="line"
+         id="tspan4780"
+         x="34.819729"
+         y="873.95605"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold'">SAVE</tspan></text>
+  </g>
+</svg>

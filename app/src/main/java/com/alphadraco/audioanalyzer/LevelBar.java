@@ -320,8 +320,8 @@ public class LevelBar  extends View {
         if ((powerTrack != null)) {
             if (powerTrack.name.equals("Track")) {
                 String s="Track";
-                if (root.dataConsolidator.trackf > 0) {
-                    s=getFstring(root.dataConsolidator.trackf);
+                if (root.spectralView.trackf > 0) {
+                    s=getFstring(root.spectralView.trackf);
                 }
                 canvas.drawText(s, 10, height / 2.0f + fontHeight / 2.0f, paint_levels);
             } else

@@ -4,6 +4,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -23,12 +24,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import android.widget.TabHost;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
@@ -46,12 +50,14 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     private Thread recordingThread = null;
     private Thread processingThread = null;
     private Thread playingThread = null;
-    private SpectralView spectralView=null;
+    public SpectralView spectralView=null;
     private LevelBar levelBar1=null;
     private LevelBar levelBar2=null;
     private WaveView waveView=null;
 
     private boolean isRecording = false;
+    private boolean quitting=false;
+    private int quittick=0;
     private boolean pause=false;
     public boolean resetPeak=false;
 
@@ -60,7 +66,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     private int window=0;
     private int fsample=44100;
     private int recms=0;
-    private float trackf=-1;
+    // private float trackf=-1;
 
     public int terzw=0;
 
@@ -104,6 +110,41 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     // Generator GUI
     public ArrayList<ControlInput> fgen_list;
 
+    // Sweep GUI
+    private ImageButton bn_xy_cal;
+    private ImageButton bn_xy_delete;
+    private ImageButton bn_xy_zoom_all;
+    private ImageButton bn_xy_setup;
+    private TextView tx_xy_sweep_mode;
+    private ImageButton bn_xy_play;
+    private SweepPlotView xy_plot;
+    private ImageButton bn_xy_style;
+
+    private boolean Sweeping=false;
+    private int SweepStep=0;
+    private int SweepPhase=0;
+    private float SweepFreq=0.0f;
+    private XYdata SweepPlot=null;
+    private boolean SweepRenew=false;
+
+    // Report GUI
+    private ImageButton bn_rp_setup;
+    private ImageButton bn_rp_cal;
+    // private ImageButton bn_rp_minus;
+    // private ImageButton bn_rp_style;
+    private ImageButton bn_rp_save;
+    private ImageButton bn_rp_zoom;
+    private ListView lv_rp_items;
+    public AudioReportView rp_view;
+    public AudioWaveView rp_wave_view;
+
+    private boolean reporting=false;
+    private int reportingctr=0;
+    private int reportend;
+    private int lastserial;
+    private boolean reportRenew=false;
+    private AudioReport report=null;
+
     // Calibration
     float mic_in_MO;
     float mic_in_Vref;
@@ -116,38 +157,125 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     boolean overflow;
     int tickctr;
 
+    public int getCalModes() { return 4; }
+
+    public String getUnit(int idx ){
+        switch (idx) {
+            case 0: // No Calibration
+                return "dBFS";
+            case 1: // internal Microphone
+                return "dBSPL";
+            case 2: // external Input
+                return "dBV";
+            case 3: // external Microphone
+                return "dBSPL";
+        }
+        return null;
+    }
+
+    public String getLinearUnit(int idx) {
+        switch (idx) {
+            case 0: // No Calibration
+                return "FS";
+            case 1: // internal Microphone
+                return "Pa";
+            case 2: // external Input
+                return "V";
+            case 3: // external Microphone
+                return "Pa";
+        }
+        return null;
+    }
+
+    public float getCalOfs(int idx) {
+        switch (idx) {
+            case 0: // No Calibration
+                return 0.0f;
+            case 1: // internal Microphone
+                return (float)(mic_Pref-mic_dBFS);
+            case 2: // external Input
+                return (float)(20.0*Math.log10(mic_in_Vref/1000.0)-mic_in_dBFS);
+            case 3: // external Microphone
+                return (float)(20.0*Math.log10(mic_in_Vref/1000.0)-mic_in_dBFS-mic_in_MO+94.0f);
+        }
+        return 0.0f;
+    }
+
+    public float getCalScale(int idx) {
+        switch (idx) {
+            case 0: // No Calibration
+                return 1.0f;
+            case 1: // internal Microphone
+                return (float)Math.pow(10.0,getCalOfs(idx)/20.0)*20e-6f;
+            case 2: // external Input
+                return (float)Math.pow(10.0,getCalOfs(idx)/20.0);
+            case 3: // external Microphone
+                return (float)Math.pow(10.0,getCalOfs(idx)/20.0)*20e-6f;
+        }
+        return 1.0f;
+    }
+
+    public String getCalNote(int idx) {
+        switch (idx) {
+            case 0: // No Calibration
+                return "direct ADC";
+            case 1: // internal Microphone
+                return "Internal Mic";
+            case 2: // external Input
+                return "External In";
+            case 3: // external Microphone
+                return "External Mic";
+        }
+        return null;
+    }
+
     public void updateCal() {
         float ofs=0.0f;
         String unit="dBFS";
+        String linUnit="FS";
+        float linScale=1.0f;
         String note="direct ADC";
 
-        switch (calmode) {
+        ofs=getCalOfs(calmode);
+        linScale=getCalScale(calmode);
+        unit=getUnit(calmode);
+        linUnit=getLinearUnit(calmode);
+        note=getCalNote(calmode);
+        /*switch (calmode) {
             default:
             case 0:
                 // No Calibration
                 ofs=0.0f;
+                linScale=1.0f;
                 unit="dBFS";
+                linUnit="FS";
                 note="direct ADC";
                 break;
             case 1:
                 // internal Microphone
                 ofs=(float)(mic_Pref-mic_dBFS);
+                linScale=(float)Math.pow(10.0,ofs/20.0)*20e-6f;
                 unit="dBSPL";
+                linUnit="Pa";
                 note="Internal Mic";
                 break;
             case 2:
                 // external input
                 ofs=(float)(20.0*Math.log10(mic_in_Vref/1000.0)-mic_in_dBFS);
+                linScale=(float)Math.pow(10.0,ofs/20.0);
                 unit="dBV";
+                linUnit="V";
                 note="External In";
                 break;
             case 3:
                 // external mic
                 ofs=(float)(20.0*Math.log10(mic_in_Vref/1000.0)-mic_in_dBFS-mic_in_MO+94.0f);
+                linScale=(float)Math.pow(10.0,ofs/20.0)*20e-6f;
                 unit="dBSPL";
+                linUnit="Pa";
                 note="External Mic";
                 break;
-        }
+        }*/
         spectralView.ofs=ofs;
         spectralView.unit=unit;
         spectralView.note=note;
@@ -157,6 +285,15 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         levelBar2.unit=unit;
         sp_plot.ofs=ofs;
         sp_plot.unit=unit;
+        xy_plot.displayOfs=ofs;
+        xy_plot.unit=unit;
+        xy_plot.invalidate();
+        rp_view.displayOfs=ofs;
+        rp_view.unit=unit;
+        rp_view.invalidate();
+        rp_wave_view.unit=linUnit;
+        rp_wave_view.displayScale=linScale;
+        rp_wave_view.invalidate();
         tx_cal.setText(note);
     }
 
@@ -172,8 +309,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         View view = LayoutInflater.from(context).inflate(R.layout.tab_layout, null);
         ImageView iv = (ImageView) view.findViewById(R.id.imageView);
         iv.setImageResource(icon);
-        TextView tv = (TextView) view.findViewById(R.id.textView);
-        tv.setText(title);
+        // TextView tv = (TextView) view.findViewById(R.id.textView);
+        // tv.setText(title);
         return view;
     }
 
@@ -193,6 +330,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         setNewTab(this, myTabHost, "tab_analyze", "FFT", R.mipmap.sink, R.id.analyze);
         setNewTab(this,myTabHost,"tab_stripplot","Time",R.mipmap.strip,R.id.stripplot);
         setNewTab(this,myTabHost,"tab_generate","Sig",R.mipmap.source,R.id.generate);
+        setNewTab(this,myTabHost,"tab_sweep","Swp",R.mipmap.sweep,R.id.sweep);
+        setNewTab(this,myTabHost,"tab_report","Rprt",R.mipmap.report,R.id.report);
 
         // General GUI
         bn_speaker=(ImageButton) findViewById(R.id.bn_speaker);
@@ -218,11 +357,33 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         bn_sp_zoom_all=(ImageButton) findViewById(R.id.bn_sp_zoom_all);
         sp_plot=(StripPlotView) findViewById(R.id.sp_plot);
 
+        // Sweep GUI
+        bn_xy_cal = (ImageButton) findViewById(R.id.bn_xy_cal);
+        bn_xy_style = (ImageButton) findViewById(R.id.bn_xy_style);
+        bn_xy_delete = (ImageButton) findViewById(R.id.bn_xy_delete);
+        bn_xy_zoom_all = (ImageButton) findViewById(R.id.bn_xy_zoom_all);
+        bn_xy_setup = (ImageButton) findViewById(R.id.bn_xy_setup);
+        tx_xy_sweep_mode = (TextView) findViewById(R.id.tx_xy_sweep_mode);
+        bn_xy_play = (ImageButton) findViewById(R.id.bn_xy_play);
+        xy_plot = (SweepPlotView) findViewById(R.id.xy_plot);
+
+        // Report GUI
+        bn_rp_setup = (ImageButton) findViewById(R.id.bn_rp_setup);
+        bn_rp_cal = (ImageButton) findViewById(R.id.bn_rp_cal);
+        // bn_rp_minus = (ImageButton) findViewById(R.id.bn_rp_minus);
+        // bn_rp_style = (ImageButton) findViewById(R.id.bn_rp_style);
+        bn_rp_save = (ImageButton) findViewById(R.id.bn_rp_save);
+        bn_rp_zoom = (ImageButton)findViewById(R.id.bn_rp_zoom);
+        lv_rp_items = (ListView) findViewById(R.id.lv_rp_items);
+        rp_view = (AudioReportView) findViewById(R.id.xy_rp_plot);
+        rp_wave_view = (AudioWaveView) findViewById(R.id.xy_rp_wave);
+
         // JNI Helper
         audioAnalyzerHelper = new AudioAnalyzerHelper();
 
         // Load Preferences
         AudioAnalyzerPrefs =  PreferenceManager.getDefaultSharedPreferences(this);
+
         listener=new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
@@ -268,8 +429,16 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
         calmode=AudioAnalyzerPrefs.getInt("CalMode", 0);
 
-        spectralView.setPreferences(this,AudioAnalyzerPrefs);
-        waveView.setPreferences(this,AudioAnalyzerPrefs);
+        spectralView.setPreferences(this, AudioAnalyzerPrefs);
+        waveView.setPreferences(this, AudioAnalyzerPrefs);
+
+
+        // Assume thisActivity is the current activity
+        //int permissionCheck = ContextCompat.checkSelfPermission(thisActivity,
+        //        Manifest.permission.RECORD_AUDIO);
+        //if (permissionCheck == PackageManager.PERMISSION_DENIED) {
+
+        //}
 
         int minBuffSize = AudioRecord.getMinBufferSize(fsample, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         /* MediaRecorder.AudioSource.VOICE_RECOGNITION has AGC turned off --> calibration is possible
@@ -300,7 +469,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
         dataConsolidator = new DataConsolidator(this);
 
-        processBufferList=new ProcessBufferList(10);
+        processBufferList=new ProcessBufferList(32);
 
         recms=0;
         if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED)
@@ -342,6 +511,83 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
                 }
             }
         });
+
+        // Sweep GUI
+        xy_plot.setPreferences(this, AudioAnalyzerPrefs);
+        xy_plot.install_handlers(bn_xy_delete, bn_xy_style, bn_xy_zoom_all);
+
+        bn_xy_setup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent launchSettings = new Intent(AudioAnalyzer.this, SweepSettings.class);
+                startActivity(launchSettings);
+            }
+        });
+
+        bn_xy_play.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Sweeping) {
+                    Sweeping=false;
+                    bn_xy_play.setImageResource(R.mipmap.play_button);
+                    audioAnalyzerHelper.SignalProg(25,0);
+                } else {
+                    if (fftsize != 4096) {
+                        AlertDialog alertDialog = new AlertDialog.Builder(AudioAnalyzer.this).create();
+                        alertDialog.setTitle("Info");
+                        alertDialog.setMessage("FFT Size must be 4096 to use this feature. Set this Value now?");
+                        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK",
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        SharedPreferences.Editor E = AudioAnalyzerPrefs.edit();
+                                        E.putString("FFTSize","4096");
+                                        E.apply();
+                                        // fftsize=4096;
+                                        dialog.dismiss();
+                                    }
+                                });
+                        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "NO",
+                                new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                });
+
+                        alertDialog.show();
+                        return;
+                    }
+                    SweepStep = 0;
+                    SweepPhase = 0;
+                    Sweeping = true;
+                    bn_xy_play.setImageResource(R.mipmap.pause_button);
+                    audioAnalyzerHelper.SignalProg(25, 0);
+                }
+            }
+        });
+
+        // Report GUI
+        rp_view.setPreferences(this, AudioAnalyzerPrefs);
+        rp_wave_view.setPreferences(this, AudioAnalyzerPrefs);
+        rp_view.install_handlers(null,bn_rp_zoom);
+        rp_view.initListView(lv_rp_items);
+        rp_view.initWaveView(rp_wave_view);
+
+        bn_rp_save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (reporting) {
+                    return;
+                }
+                reportingctr=0;
+                reporting=true;
+                reportend=lastserial+16;
+                bn_rp_save.setImageResource(R.mipmap.recording);
+
+            }
+        });
+
+
+
 
         // Analyzer GUI Interactions
         bn_menu.setOnClickListener(new View.OnClickListener() {
@@ -430,6 +676,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         };
         bn_cal.setOnClickListener(calChanger);
         bn_sp_cal.setOnClickListener(calChanger);
+        bn_xy_cal.setOnClickListener(calChanger);
+        bn_rp_cal.setOnClickListener(calChanger);
 
         bn_spec_mode.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -509,6 +757,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         // sb.setThumb(getResources().getDrawable(R.drawable.valueselectthumb));
 
 
+
+
         // ////////////////////////////////////////////////////
         // Start the worker Threads
         recordingThread = new Thread(new Runnable() {
@@ -551,11 +801,26 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
 
     }
 
+    // Cyclic call within the GUI Thread --> Can modify GUI Elements
     private void tick() {
+        // Initaite Application Exit from the Main GUI Thread
+        if (quitting) {
+            if (isRecording) {
+                stopRecording();
+                return;
+            }
+            quittick++; // Leaves Time fro the worker threads to finish gracefully.
+            if (quittick > 3)
+                finish();
+            return;
+        }
+
         if (isRecording) {
             float time=(float)recms/(float)fsample;
             String s=String.format("%4.2f s", time);
             tx_status.setText(s);
+
+            // Manage Out-of-Sync Flag
             if (tickctr >= 10) {
                 if (processBufferList.overflow > 0) {
                     if (!overflow)
@@ -572,6 +837,15 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             }
             tickctr++;
 
+            // Manage Sweep
+            if (SweepRenew) {
+                xy_plot.invalidate();
+                if (!Sweeping)
+                    bn_xy_play.setImageResource(R.mipmap.play_button);
+                SweepRenew=false;
+            }
+
+            // Update Display
             if (!pause) {
                 if (spectralView != null) spectralView.display();
                 if (levelBar1 != null) levelBar1.display();
@@ -579,6 +853,28 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
                 if (waveView != null) waveView.display();
             }
             if (sp_plot != null) sp_plot.display();
+
+            // Report
+            if (reporting) {
+                if (reportingctr==5) {
+                    bn_rp_save.setImageResource(R.mipmap.record);
+                } else if (reportingctr>=10) {
+                    bn_rp_save.setImageResource(R.mipmap.recording);
+                    reportingctr=0;
+                }
+                reportingctr++;
+             }
+            if (reportRenew) {
+                if (!reporting)
+                    bn_rp_save.setImageResource(R.mipmap.record);
+                reportRenew=false;
+                if (report != null) {
+                    report.process();
+                    rp_view.add(report);
+                    report=null;
+                }
+            }
+
         } else {
             ((TextView) findViewById(R.id.tx_status)).setText("Offline");
         }
@@ -587,17 +883,23 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     // Audio Recording Process
     private void recordAudioData() {
         short sData[] = new short[8192];
+        int state=audioRecord.getState();
 
-        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
-            // Just emulate sound source
+        if (state != AudioRecord.STATE_INITIALIZED) {
+            // Just emulate sound source delivering a 10kHz Sine for testing purposes
             while (isRecording) {
                 recms += fftsize;
                 for (int i=0;i<fftsize;i++) {
                     float t=(float)i/fsample;
                     sData[i]=(short)(32767.0*Math.sin(2*Math.PI*10000*t));
                 }
-                ProcessBuffer pb = new ProcessBuffer(fsample, fftsize, sData);
-                processBufferList.add(pb);
+                // ProcessBuffer pb = new ProcessBuffer(fsample, fftsize, sData);
+                //processBufferList.add(pb);
+                //processBufferList.add(fsample,fftsize,sData);
+                ProcessResult pr=processBufferList.addslot();
+                pr.ReUse(sData,fftsize,fsample,spectralView.trackf,window,terzw);
+
+                processBufferList.notify_new_buffer();
                 try { Thread.sleep(fftsize*1000/fsample,0); }
                 catch (InterruptedException E ){
                     // Ignore
@@ -606,9 +908,8 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             return;
         }
 
+        // Regular Working --> Pickup Data and add it to the processBufferList
         while (isRecording) {
-            // gets the voice output from microphone to byte format
-
             audioRecord.read(sData, 0, fftsize);
             recms += fftsize;
             // Dummy Data for numeric Calibration/verification
@@ -616,30 +917,99 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
                 float t=(float)i/fsample;
                 sData[i]=(short)(32767.0*Math.sin(2*Math.PI*10000*t));
             }*/
-            ProcessBuffer pb = new ProcessBuffer(fsample, fftsize, sData);
-            processBufferList.add(pb);
+
+            // Add to list
+            //processBufferList.add(fsample,fftsize,sData);
+            ProcessResult pr=processBufferList.addslot();
+            pr.ReUse(sData,fftsize,fsample,spectralView.trackf,window,terzw);
+
+            processBufferList.notify_new_buffer();
         }
     }
 
     // Audio Processing Process
     private void processAudioData() {
-        ProcessBuffer pb;
+        ProcessResult pr;
+        float tracklvl=-120.0f;
+        boolean valid=false;
+
         while (isRecording) {
-            while ((pb = processBufferList.retrieve()) != null) {
-                trackf=spectralView.trackf;
-                dataConsolidator.trackf=trackf;
-                ProcessResult pr = new ProcessResult(pb, trackf, window, terzw);
+            //while ((pb = processBufferList.retrieve()) != null) {
+            while ((pr = processBufferList.retrieve()) != null) {
+                //trackf=spectralView.trackf;
+                //dataConsolidator.trackf=trackf;
+                //ProcessResult pr = new ProcessResult(pb, trackf, window, terzw);
                 if (resetPeak) audioAnalyzerHelper.fftResetPeak();
-                resetPeak=false;
+                resetPeak = false;
+
                 pr.process(audioAnalyzerHelper);
-                // processResultList.add(pr);
+                lastserial=pr.serial;
+                tracklvl = pr.trackLevel2; // For the sweep only
 
                 dataConsolidator.add(pr);
+
                 levelBar1.add();
                 levelBar2.add();
                 waveView.add();
                 sp_plot.add();
                 dataConsolidator.tick();
+                valid = true;
+                if (reporting && lastserial>=reportend) {
+                    report = new AudioReport(rp_view, rp_wave_view);
+                    report.addData(processBufferList.get_old_results(reportend-30,reportend));
+                    report.calMode=calmode;
+                    if (report.data.size() == 0)
+                        report=null;
+                    reporting=false;
+                    reportRenew=true;
+                }
+            }
+            if (Sweeping && valid) {
+                switch (SweepPhase) {
+                    case 0: // Turn Sine On
+                        if (SweepStep==0) {
+                            SweepFreq=xy_plot.getSweepStepFreq(SweepStep);
+                            audioAnalyzerHelper.SignalProg(26,(float)Math.pow(10,xy_plot.SweepAmp/20));
+                            audioAnalyzerHelper.SignalProg(27,SweepFreq);
+                            audioAnalyzerHelper.SignalProg(25,1);
+                            Calendar cal = Calendar.getInstance();
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                            SweepPlot=xy_plot.addPlot(sdf.format(cal.getTime()));
+                        } else {
+                            SweepFreq=xy_plot.getSweepStepFreq(SweepStep);
+                            audioAnalyzerHelper.SignalProg(27,SweepFreq);
+                        }
+                        SweepPhase++;
+                        break;
+                    case 1: // delay Phase
+                        SweepPhase++;
+                        break;
+                    case 2: // delay Phase
+                        SweepPhase++;
+                        break;
+                    case 3: // delay Phase
+                        SweepPhase++;
+                        break;
+                    case 4: // delay Phase
+                        SweepPhase++;
+                        break;
+                    case 5: // Measurment phase
+                        SweepPhase++;
+                        break;
+                    case 6: // Get Data
+                        SweepPlot.add(SweepFreq,tracklvl);
+                        //SweepPlot.add(SweepFreq,-10);
+                        SweepPhase=0;
+                        SweepStep++;
+                        if (SweepStep >= xy_plot.SweepSteps) {
+                            SweepStep = 0;
+                            Sweeping = false;
+                            audioAnalyzerHelper.SignalProg(25,0);
+                            // bn_xy_play.setImageResource(R.mipmap.play_button);
+                        }
+                        SweepRenew=true;
+                        break;
+                }
             }
             // Wait for next event
             processBufferList.doWait();
@@ -688,8 +1058,9 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            stopRecording();
-            finish();
+            quitting=true;
+            //stopRecording();
+            //finish();
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -701,13 +1072,7 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         return true;
     }
 
-    void showAboutWin() {
-        View messageView = getLayoutInflater().inflate(R.layout.aboutwin,null,false);
-        TextView tv=(TextView) messageView.findViewById(R.id.tv_about_version);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setIcon(R.mipmap.ic_launcher);
-        builder.setTitle("AudioAnalyzer");
+    public String getVersion() {
         String version="undefined";
         try {
             PackageManager manager = this.getPackageManager();
@@ -716,7 +1081,17 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
         } catch (PackageManager.NameNotFoundException E) {
             // Ignore
         }
-        tv.setText(version);
+        return version;
+    }
+
+    void showAboutWin() {
+        View messageView = getLayoutInflater().inflate(R.layout.aboutwin,null,false);
+        TextView tv=(TextView) messageView.findViewById(R.id.tv_about_version);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setIcon(R.mipmap.ic_launcher);
+        builder.setTitle("AudioAnalyzer");
+        tv.setText(getVersion());
         builder.setView(messageView);
         builder.create();
         builder.show();
@@ -740,8 +1115,9 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             return true;
         }
         if (id == R.id.action_quit) {
-            stopRecording();
-            finish();
+            //stopRecording();
+            //finish();
+            quitting=true;
             return true;
         }
 
@@ -768,8 +1144,9 @@ public class AudioAnalyzer extends Activity implements PopupMenu.OnMenuItemClick
             return true;
         }
         if (id == R.id.action_quit) {
-            stopRecording();
-            finish();
+            // stopRecording();
+            quitting=true;
+            //finish();
             return true;
         }
 

@@ -15,7 +15,7 @@
         android:padding="0dp"
         android:layout_gravity="center_vertical" />
 
-    <TextView
+    <!--TextView
         android:id="@+id/textView"
         android:layout_margin="1dp"
         android:layout_width="wrap_content"
@@ -27,6 +27,6 @@
         android:paddingStart="1dp"
         android:singleLine="true"
         android:textAlignment="center"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:textAppearance="?android:attr/textAppearanceMedium" / -->
 
 </LinearLayout>

@@ -29,6 +29,7 @@ FftProcessor::FftProcessor() {
 
     noavg=true;
     trackf=-1;
+    trackf2=-1;
     trackint0=trackint1=trackint2=-1;
 
     // YN= NULL;
@@ -39,7 +40,7 @@ FftProcessor::FftProcessor() {
     BFILTER=NULL;
     CFILTER=NULL;
 
-    FRES=(float*)malloc(20*sizeof(float));
+    FRES=(float*)malloc(21*sizeof(float));
     pkval=1e-6;
     resetpeak=false;
 
@@ -363,10 +364,16 @@ void FftProcessor::setData(int len, float fs, int usewin, float tf, short *data,
             trackint1=(int)floor(trackf*LEN/FS+0.5);
             trackint0=trackint1-1;
             trackint2=trackint1+1;
-            if ((trackint0 < 1) || (trackint2 >= len/2)) {
+            if (trackint0 < 1) trackint0=-1;
+            if (trackint1 < 1) trackint1=-1;
+            if (trackint2 < 1) trackint2=-1;
+            if (trackint0 >= len/2) trackint0=-1;
+            if (trackint1 >= len/2) trackint1=-1;
+            if (trackint2 >= len/2) trackint2=-1;
+            /*if ((trackint0 < 1) || (trackint2 >= len/2)) {
                 trackf=-1;
                 trackint0=trackint1=trackint2=-1;
-            }
+            }*/
         } else {
             trackf=-1;
             trackint0=trackint1=trackint2=-1;
@@ -469,6 +476,22 @@ bool FftProcessor::process() {
     // float tc=0.05f; // exp(-LEN/128.0f*FS/44100.0f)*0.05;
     float tc=(float)exp(log(LEN)*0.904684-9.951);
     float sumtrack=0.0f;
+    float sumtrack2=0.0f;
+
+    int trackint21 = -1;
+    int trackint20 = -1;
+    int trackint22 = -1;
+    if (trackf2 > 0) {
+        trackint21 = (int) floor(trackf2 * LEN / FS + 0.5);
+        trackint20 = trackint21 - 1;
+        trackint22 = trackint21 + 1;
+        if (trackint20 < 1) trackint20 = -1;
+        if (trackint21 < 1) trackint21 = -1;
+        if (trackint22 < 1) trackint22 = -1;
+        if (trackint20 >= LEN / 2) trackint20 = -1;
+        if (trackint21 >= LEN / 2) trackint21 = -1;
+        if (trackint22 >= LEN / 2) trackint22 = -1;
+    }
 
     for (int i=0;i<LEN/2;i++) {
         float eng=(RAW[2*i+0]*RAW[2*i+0]+RAW[2*i+1]*RAW[2*i+1])*scalef;
@@ -511,6 +534,10 @@ bool FftProcessor::process() {
         if (trackint0 == i) sumtrack+=eng;
         if (trackint1 == i) sumtrack+=eng;
         if (trackint2 == i) sumtrack+=eng;
+
+        if (trackint20 == i) sumtrack2+=eng;
+        if (trackint21 == i) sumtrack2+=eng;
+        if (trackint22 == i) sumtrack2+=eng;
     }
 
     if (noavg) {
@@ -595,6 +622,11 @@ bool FftProcessor::process() {
     FRES[17]=10.0f*log10f(sumC10_100+sumC100_10k)-noise_win_scaling;
     FRES[18]=10.0f*log10f(sumC100_10k)-noise_win_scaling;
     FRES[19]=10.0f*log10f(sumC100_10k+sumC10k_20k)-noise_win_scaling;
+
+    if (sumtrack2 > 0)
+        FRES[20]=10.0f*log10f(sumtrack2)-noise_win_scaling;
+    else
+        FRES[20]=-120.0f;
 
     return true;
 }
@@ -815,6 +847,11 @@ void SignalGenerator::init(int _fs) {
     blocklen=0;
     SWEEPon=false;
     AMon=FMon=PMon=PWMon=ADD=false;
+    addsine=false;
+    addamp=1.0;
+    addfreq=1000;
+    addadd=2*M_PIf*addfreq/fs;
+    addt=0;
 }
 
 SignalGenerator::SignalGenerator() {
@@ -845,8 +882,20 @@ SignalGenerator::~SignalGenerator() {
 
 void SignalGenerator::calculateBlock(short *erg, int len) {
     if (!online) {
-        for (int i=0;i<len;i++)
-            erg[i]=0;
+        if (addsine) {
+            for (int i=0;i<len;i++) {
+                float v=addamp*sin(addt);
+                addt+=addadd;
+                if (addt > 2*M_PIf)
+                    addt-=2*M_PIf;
+                if (v <= -1.0f) erg[i]=-32767;
+                else if (v >= 1.0f) erg[i]=32767;
+                else erg[i]=(short)floorf(v*32767.0f+0.5f);
+            }
+        } else {
+            for (int i=0;i<len;i++)
+                erg[i] = 0;
+        }
         return;
     }
     if (len != blocklen) {
@@ -861,11 +910,16 @@ void SignalGenerator::calculateBlock(short *erg, int len) {
     FG->calculateBlock((SWEEPon)?swp:NULL,(FMon)?smod:NULL,(PMon)?smod:NULL,
                        (AMon)?smod:NULL,(PWMon)?smod:NULL,sout,len);
 
-
     for (int i=0;i<len;i++) {
         // float v=sinf(2*M_PIf*1000.0f*i/fs);
         float v=sout[i];
         if (ADD) v+=smod[i];
+        if (addsine) {
+            v+=addamp*sin(addt);
+            addt+=addadd;
+            if (addt > 2*M_PIf)
+                addt-=2*M_PIf;
+        }
         if (v <= -1.0f) erg[i]=-32767;
         else if (v >= 1.0f) erg[i]=32767;
         else erg[i]=(short)floorf(v*32767.0f+0.5f);
@@ -925,14 +979,21 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalProg(JNIEnv
         case 22: signalGenerator->SG->loop=(value>0.5f);break;
         case 23: signalGenerator->SG->trigger();break;
         case 24: signalGenerator->ADD=(value>0.5f);break;
+        case 25: signalGenerator->addsine=(value>0.5f);break;
+        case 26: signalGenerator->addamp=value;break;
+        case 27: signalGenerator->addfreq=value;
+            signalGenerator->addadd=2*M_PIf*signalGenerator->addfreq/signalGenerator->fs;
+            if (fftProcessor)
+                fftProcessor->trackf2=value;
+            break;
         default:
             return (jboolean)false;
     }
     return (jboolean)true;
 }
 
-// Wave File Header Generator (is  ore difficult within Java)
-// Integeres have to be stored Little Endian.
+// Wave File Header Generator (is very difficult within Java)
+// Integers have to be stored Little Endian.
 typedef uint8_t RIFFID[4];
 
 typedef struct sRIFF_RIFF {
@@ -981,6 +1042,12 @@ void setRIFF(RIFFID *R, char *id) {
     }
 }
 
+void setLE_int16_int8(uint8_t *tgt, uint16_t s) {
+    uint8_t *t=tgt;
+    *t=(uint8_t) ((uint16_t) s & 0x00FF);t++;
+    *t=(uint8_t) ((uint16_t) (s>>8) & 0x00FF);
+}
+
 void setLE_int16(uint16_t *tgt, uint16_t s) {
     uint8_t *t=(uint8_t *)tgt;
     *t=(uint8_t) ((uint16_t) s & 0x00FF);t++;
@@ -1023,6 +1090,21 @@ jint Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavHeader(JNIEn
     return sizeof(tWAVEHEADER);
 }
 
+jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalWavData(JNIEnv *env, jobject obj, jshortArray src, jbyteArray tgt) {
+    int asize=env->GetArrayLength(src);
+    if (env->GetArrayLength(tgt) < asize*2) return (jboolean)false;
+
+    jshort *jsrc=env->GetShortArrayElements(src,0);
+    jbyte *jtgt=env->GetByteArrayElements(tgt,0);
+    for (int i=0;i<asize;i++) {
+        setLE_int16_int8((uint8_t*)&jtgt[i*2],(uint16_t)jsrc[i]);
+    }
+    env->ReleaseByteArrayElements(tgt,jtgt,0);
+    env->ReleaseShortArrayElements(src,jsrc,0);
+
+    return (jboolean)true;
+}
+
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_SignalSource(JNIEnv *env, jobject obj, jshortArray tgt) {
     if (!signalGenerator) return (jboolean)false;
     jshort *jdata=env->GetShortArrayElements(tgt,0);
@@ -1040,12 +1122,12 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetup
 
 jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorSetData(
         JNIEnv *env, jobject obj,
-        jfloat  fs, jint usewin, jfloat trackf, jshortArray data,
+        jfloat  fs, jint usewin, jfloat trackf, jshortArray data, jint len,
         jfloat fmin, jfloat fmax,jint pixels, jboolean logscale,
         jint terzw) {
     if (!fftProcessor) return (jboolean)false;
     jshort *jdata=env->GetShortArrayElements(data,0);
-    int len=env->GetArrayLength(data);
+    // int len=env->GetArrayLength(data);
     fftProcessor->setData(len,fs,usewin,trackf,jdata,fmin,fmax,pixels,logscale,terzw);
     env->ReleaseShortArrayElements(data,jdata,0);
     return (jboolean)true;
@@ -1088,7 +1170,7 @@ jfloatArray Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGe
             env->SetFloatArrayRegion(result,0,fftProcessor->LEN/2,fftProcessor->Y);
             break;
         case 2: // integrated values
-            env->SetFloatArrayRegion(result,0,20,fftProcessor->FRES);
+            env->SetFloatArrayRegion(result,0,21,fftProcessor->FRES);
             break;
         case 3: // Average Spectrum
             env->SetFloatArrayRegion(result,0,fftProcessor->LEN/2,fftProcessor->YY);
@@ -1137,7 +1219,7 @@ jboolean Java_com_alphadraco_audioanalyzer_AudioAnalyzerHelper_fftProcessorGetDa
             env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->Y);
             break;
         case 2: // integrated values
-            env->SetFloatArrayRegion(result,0,min(20,size),fftProcessor->FRES);
+            env->SetFloatArrayRegion(result,0,min(21,size),fftProcessor->FRES);
             break;
         case 3: // Average Spectrum
             env->SetFloatArrayRegion(result,0,min(fftProcessor->LEN/2,size),fftProcessor->YY);

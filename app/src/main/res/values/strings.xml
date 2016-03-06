@@ -3,8 +3,13 @@
 
     <!--string name="action_settings">Settings</string -->
 
+    <string name="reportFooterText">
+        <b>(C) 2016 Thomas Buck 101010b</b><br/>\n
+        <a href="https://55476f744974.wordpress.com">https://55476f744974.wordpress.com"</a>\n
+    </string>
+
     <string name="aboutText">
-        <b>2015 Thomas Buck 101010b</b>\n
+        <b>2016 Thomas Buck 101010b</b>\n
         https://55476f744974.wordpress.com/\n
         \n
         <b>This is an Open Source Project</b>\n

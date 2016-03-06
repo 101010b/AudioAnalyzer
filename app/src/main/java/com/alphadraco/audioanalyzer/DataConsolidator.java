@@ -24,7 +24,7 @@ public class DataConsolidator {
     int window;
     float fs;
     int len;
-    float trackf;
+    // float trackf;
 
     final static String[] powerTrackNames =
             {       "Flat",                     "Flat10k",                  "Flat20k",
@@ -37,7 +37,7 @@ public class DataConsolidator {
                     "C10-10k",                  "C100-10k",
                     "Track",                    "Peak"
             };
-    final String[] powerTrackLongNames =
+    final static String[] powerTrackLongNames =
             {       "AC RMS",                   "0-10kHz",                  "0-20kHz",
                     "1kHz",
                     "A-Weighted, 10Hz-20kHz",   "A-Weighted, 100Hz-20kHz",
@@ -48,7 +48,7 @@ public class DataConsolidator {
                     "C-Weighted, 10Hz-10kHz",   "C-Weighted, 100Hz-10kHz",
                     "Track",                    "Peak"
             };
-    int[] powerTrackIds =
+    final static int[] powerTrackIds =
             {       2,                          3,                          4,
                     5,
                     6,                          9,
@@ -77,7 +77,7 @@ public class DataConsolidator {
 
         window=len=-1;
         fs=-1.0f;
-        trackf=-1;
+        // trackf=-1;
         for (PowerTrack p:powerTracks)
             p.reset();
     }

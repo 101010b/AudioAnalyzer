@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Frequency Range">
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="100"
+            android:dialogTitle="Start"
+            android:inputType="numberDecimal"
+            android:key="SweepFreqStart"
+            android:summary="Start Frequency %s Hz"
+            android:title="Start Frequency" />
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="20"
+            android:dialogTitle="Stop"
+            android:inputType="numberDecimal"
+            android:key="SweepFreqStop"
+            android:summary="Stop Frequency %s kHz"
+            android:title="Stop Frequency" />
+        <CheckBoxPreference android:title="Logarithmic Sweep"
+            android:defaultValue="true"
+            android:key="SweepLog">
+        </CheckBoxPreference>
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="60"
+            android:dialogTitle="Steps"
+            android:inputType="numberDecimal"
+            android:key="SweepSteps"
+            android:summary="Sweep in %s Steps"
+            android:title="Number of Steps" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Frequency Range">
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+            android:defaultValue="-6"
+            android:dialogTitle="Amplitude"
+            android:inputType="numberDecimal"
+            android:key="SweepAmp"
+            android:summary="Sweep Amplitude %s dBFS"
+            android:title="Amplitude" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
