@@ -96,6 +96,12 @@ public class PlotAxis {
         gridLength++;
     }
 
+
+    // Get Pixel Length of the Axis
+    public float px() {
+        return Math.abs(pxMax-pxMin);
+    }
+
     // Is a certain position within the displayable pxiel range?
     public boolean within(float pos) {
         if (pxMax < pxMin)

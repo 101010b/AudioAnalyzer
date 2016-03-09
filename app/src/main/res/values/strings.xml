@@ -3,10 +3,9 @@
 
     <!--string name="action_settings">Settings</string -->
 
-    <string name="reportFooterText">
-        <b>(C) 2016 Thomas Buck 101010b</b><br/>\n
-        <a href="https://55476f744974.wordpress.com">https://55476f744974.wordpress.com"</a>\n
-    </string>
+    <string name="reportFooterText">(C) 2016 Thomas Buck 101010b</string>
+
+    <string name="googlePlayLink">https://play.google.com/store/apps/details?id=com.alphadraco.audioanalyzer</string>
 
     <string name="aboutText">
         <b>2016 Thomas Buck 101010b</b>\n

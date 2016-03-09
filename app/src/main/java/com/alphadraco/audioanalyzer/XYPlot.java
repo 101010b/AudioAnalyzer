@@ -59,22 +59,133 @@ public class XYPlot extends View {
     protected ArrayList<XYdata> lines;
 
     // Display Coordinates
-    public int displayWidth;
-    public int displayHeight;
-    public int ofsX;
-    public int ofsY;
+    //public int displayWidth;
+    //public int displayHeight;
+    //public int ofsX;
+    //public int ofsY;
 
     // Painting
-    protected Paint paint_frame;
-    protected Paint paint_grid;
-    protected Paint paint_unit;
-    protected Paint paint_gridX;
-    protected Paint paint_subgrid;
-    protected Paint textX;
-    protected Paint textY;
-    protected float fctr;
-    protected float fontspace;
-    protected float legendwidth;
+    private class PaintConfig {
+        public Paint paint_frame;
+        public Paint paint_grid;
+        public Paint paint_unit;
+        public Paint paint_gridX;
+        public Paint paint_subgrid;
+        public Paint textX;
+        public Paint textY;
+
+        public float xAxisHeight;
+        public float yAxisWidth;
+
+        public float xLableWidth;
+        public float yLableHeight;
+
+        public float fontspace;
+        public boolean antiAlias;
+        public boolean inverted;
+
+        public float stdFontSize;
+
+
+
+        public PaintConfig(float _stdFontSize, boolean _antiAlias, boolean _inverted) {
+            stdFontSize=_stdFontSize;
+            antiAlias=_antiAlias;
+            inverted=_inverted;
+
+            paint_frame=new Paint();
+            if (inverted)
+                paint_frame.setColor(Color.BLACK);
+            else
+                paint_frame.setColor(Color.WHITE);
+            paint_frame.setStyle(Paint.Style.STROKE);
+            paint_frame.setStrokeWidth(2);
+            paint_frame.setTextAlign(Paint.Align.LEFT);
+            paint_frame.setTextSize(stdFontSize);
+            paint_frame.setAntiAlias(antiAlias);
+
+            paint_unit=new Paint();
+            if (inverted)
+                paint_unit.setColor(Color.BLACK);
+            else
+                paint_unit.setColor(Color.WHITE);
+            paint_unit.setTextAlign(Paint.Align.LEFT);
+            paint_unit.setTextSize(stdFontSize);
+            paint_unit.setStyle(Paint.Style.FILL);
+            paint_unit.setAntiAlias(antiAlias);
+
+            paint_grid=new Paint();
+            if (inverted)
+                paint_grid.setColor(Color.DKGRAY);
+            else
+                paint_grid.setColor(Color.GRAY);
+            paint_grid.setStyle(Paint.Style.STROKE);
+            paint_grid.setTextSize(stdFontSize);
+            paint_grid.setTextAlign(Paint.Align.RIGHT);
+            paint_grid.setAntiAlias(antiAlias);
+
+            textX=new Paint();
+            if (inverted)
+                textX.setColor(Color.DKGRAY);
+            else
+                textX.setColor(Color.GRAY);
+            textX.setStyle(Paint.Style.STROKE);
+            textX.setTextSize(stdFontSize);
+            textX.setTextAlign(Paint.Align.CENTER);
+            textX.setStyle(Paint.Style.FILL);
+            textX.setAntiAlias(antiAlias);
+
+            paint_subgrid=new Paint();
+            if (inverted)
+                paint_subgrid.setColor(Color.GRAY);
+            else
+                paint_subgrid.setColor(Color.DKGRAY);
+            paint_subgrid.setStyle(Paint.Style.STROKE);
+            paint_subgrid.setTextSize(stdFontSize);
+            paint_subgrid.setTextAlign(Paint.Align.RIGHT);
+            paint_subgrid.setAntiAlias(antiAlias);
+
+            textY=new Paint();
+            if (inverted)
+                textY.setColor(Color.DKGRAY);
+            else
+                textY.setColor(Color.GRAY);
+            textY.setStyle(Paint.Style.FILL);
+            textY.setTextSize(stdFontSize);
+            textY.setTextAlign(Paint.Align.RIGHT);
+            textY.setAntiAlias(antiAlias);
+
+            paint_gridX=new Paint();
+            if (inverted)
+                paint_gridX.setColor(Color.DKGRAY);
+            else
+                paint_gridX.setColor(Color.GRAY);
+            paint_gridX.setStyle(Paint.Style.STROKE);
+            paint_gridX.setTextSize(stdFontSize);
+            paint_gridX.setTextAlign(Paint.Align.CENTER);
+            paint_gridX.setAntiAlias(antiAlias);
+
+            String Sw = "-120.0 dB";
+            Rect rct=new Rect();
+            paint_grid.getTextBounds(Sw, 0, Sw.length(), rct);
+            //fctr=rct.height();
+            yLableHeight=rct.height();
+            fontspace=yLableHeight/5;
+
+            yAxisWidth=rct.width()+5;
+            xAxisHeight=rct.height()+5;
+
+            Sw="-10.00k";
+            paint_grid.getTextBounds(Sw, 0, Sw.length(), rct);
+            xLableWidth=rct.width();
+
+
+        }
+
+
+    };
+
+    public PaintConfig pc;
 
     // Control
     float storeyMin,storeyMax;
@@ -196,70 +307,10 @@ public class XYPlot extends View {
 
         // Init Display
         float stdsize = new Button(context).getTextSize();
+        pc=new PaintConfig(0.75f*stdsize,false,false); // No AntiAliasing on High Resolution screens
 
-        paint_frame=new Paint();
-        paint_frame.setColor(Color.WHITE);
-        paint_frame.setStyle(Paint.Style.STROKE);
-        paint_frame.setStrokeWidth(2);
-        paint_frame.setTextAlign(Paint.Align.LEFT);
-        paint_frame.setTextSize(stdsize * 0.75f);
-
-        paint_unit=new Paint();
-        paint_unit.setColor(Color.WHITE);
-        paint_unit.setTextAlign(Paint.Align.LEFT);
-        paint_unit.setTextSize(stdsize * 0.75f);
-        paint_unit.setStyle(Paint.Style.FILL);
-
-        paint_grid=new Paint();
-        paint_grid.setColor(Color.GRAY);
-        paint_grid.setStyle(Paint.Style.STROKE);
-        paint_grid.setTextSize(stdsize * 0.75f);
-        paint_grid.setTextAlign(Paint.Align.RIGHT);
-
-        textX=new Paint();
-        textX.setColor(Color.GRAY);
-        textX.setStyle(Paint.Style.STROKE);
-        textX.setTextSize(stdsize * 0.75f);
-        textX.setTextAlign(Paint.Align.CENTER);
-        textX.setStyle(Paint.Style.FILL);
-
-        paint_subgrid=new Paint();
-        paint_subgrid.setColor(Color.DKGRAY);
-        paint_subgrid.setStyle(Paint.Style.STROKE);
-        paint_subgrid.setTextSize(stdsize * 0.75f);
-        paint_subgrid.setTextAlign(Paint.Align.RIGHT);
-
-        textY=new Paint();
-        textY.setColor(Color.GRAY);
-        textY.setStyle(Paint.Style.FILL);
-        textY.setTextSize(stdsize * 0.75f);
-        textY.setTextAlign(Paint.Align.RIGHT);
-
-        paint_gridX=new Paint();
-        paint_gridX.setColor(Color.GRAY);
-        paint_gridX.setStyle(Paint.Style.STROKE);
-        paint_gridX.setTextSize(stdsize * 0.75f);
-        paint_gridX.setTextAlign(Paint.Align.CENTER);
-
-
-        String Sw = "-120.0 dB";
-        Rect rct=new Rect();
-        paint_grid.getTextBounds(Sw, 0, Sw.length(), rct);
-        fctr=rct.height();
-        fontspace=fctr/5;
-        ofsX=rct.width()+5;
-
-        Sw="A10-20k";
-        paint_grid.getTextBounds(Sw, 0, Sw.length(), rct);
-        legendwidth=rct.width();
-
-        displayWidth=getWidth()-ofsX-2;
-
-        ofsY=2;
-        displayHeight=getHeight()-ofsY-2*(int)fctr-2;
-
-        AX=new PlotAxis(0,22050,false,ofsX,ofsX+displayWidth,legendwidth);
-        AY=new PlotAxis(-120.0f,0.0f,false,ofsY+displayHeight,ofsY,1.5f*fctr);
+        AX=new PlotAxis(0,22050,false,pc.yAxisWidth+1,getWidth()-1,pc.xLableWidth);
+        AY=new PlotAxis(-120.0f,0.0f,false,getHeight()-1-pc.xAxisHeight,1,1.5f*pc.yLableHeight);
 
         displayOfs=0;
         unit="dBFS";
@@ -287,7 +338,7 @@ public class XYPlot extends View {
                 // Check fixed positions first
                 if (canLogX) {
                     // Switch Log Lin on X-Axis
-                    if (e.getY(0) > getHeight() - 2 * fctr) {
+                    if (e.getY(0) > getHeight() - 2 * pc.xAxisHeight) {
                         if (!AX.logScale) {
                             // Ensure valid Parameters for log plot
                             if (AX.aMin <= 0) AX.aMin = defaultxMin;
@@ -308,7 +359,7 @@ public class XYPlot extends View {
                 }
                 if (canLogY) {
                     // Switch Log/lin on Y-Axis
-                    if (e.getX(0) < 2*ofsX) {
+                    if (e.getX(0) < pc.yAxisWidth) {
                         if (!AY.logScale) {
                             // Ensure valid Parameters for log plot
                             if (AY.aMin <= 0) AY.aMin = defaultyMin;
@@ -371,24 +422,24 @@ public class XYPlot extends View {
                 if (pointers == 1) {
                     if (AY.logScale) {
                         float dy = e.getY() - PT0Y;
-                        float dl = -dy * (float)Math.log(storeyMax/storeyMin) / (getHeight() - 1 - ofsY - 1);
+                        float dl = -dy * (float)Math.log(storeyMax/storeyMin) / AY.px();
                         AX.aMin = storeyMin*(float)Math.exp(dl);
                         AX.aMax = storeyMax*(float)Math.exp(dl);
                     } else {
                         float dy = e.getY() - PT0Y;
-                        float dl = dy * (storeyMax - storeyMin) / (getHeight() - 1 - ofsY - 1);
+                        float dl = dy * (storeyMax - storeyMin) / AY.px();
                         AY.aMin = storeyMin + dl;
                         AY.aMax = storeyMax + dl;
                     }
 
                     if (AX.logScale) {
                         float dx = e.getX() - PT0X;
-                        float dl = -dx * (float)Math.log(storexMax/storexMin) / (getWidth() - 1 - ofsX - 1);
+                        float dl = -dx * (float)Math.log(storexMax/storexMin) / AX.px();
                         AX.aMin = storexMin*(float)Math.exp(dl);
                         AX.aMax = storexMax*(float)Math.exp(dl);
                     } else {
                         float dx = e.getX() - PT0X;
-                        float dl = dx * (storexMax - storexMin) / (getWidth() - 1 - ofsX - 1);
+                        float dl = dx * (storexMax - storexMin) / AX.px();
                         AX.aMin = storexMin - dl;
                         AX.aMax = storexMax - dl;
                     }
@@ -407,7 +458,7 @@ public class XYPlot extends View {
                         float cy1 = (e.getY(0) + e.getY(1)) / 2;
                         // vertical scale and shift
                         float yscale = (PT1Y - PT0Y) / (y1 - y0);
-                        float dy = (cy1 - cy0) / (getHeight() - 1 - ofsY - 1);
+                        float dy = (cy1 - cy0) / AY.px();
 
                         float x0 = e.getX(0);
                         float x1 = e.getX(1);
@@ -415,7 +466,7 @@ public class XYPlot extends View {
                         float cx1 = (e.getX(0) + e.getX(1)) / 2;
                         // vertical scale and shift
                         float xscale = (PT1X - PT0X) / (x1 - x0);
-                        float dx = -(cx1 - cx0) / (getWidth() - 1 - ofsX - 1);
+                        float dx = -(cx1 - cx0) / AX.px();
 
                         if (Math.abs(PT0X-PT1X) < Math.abs(PT0Y-PT1Y)) {
                             // Vertical Scale and Shift
@@ -444,7 +495,7 @@ public class XYPlot extends View {
         return true;
     }
 
-    public void drawGrid(Canvas canvas, PlotAxis PAX, PlotAxis PAY) {
+    protected void drawGrid(Canvas canvas, PlotAxis PAX, PlotAxis PAY, PaintConfig p) {
         // Horizontal
         PAX.realize();
         for (int i=0;i<PAX.gridLength;i++) {
@@ -453,14 +504,14 @@ public class XYPlot extends View {
             float val=PAX.gridValues[i];
             if ((style & 0x01) != 0) {
                 // Major
-                canvas.drawLine(pos, PAY.pxMin, pos, PAY.pxMax, paint_grid);
+                canvas.drawLine(pos, PAY.pxMin, pos, PAY.pxMax, p.paint_grid);
             } else {
                 // Minor
-                canvas.drawLine(pos, PAY.pxMin, pos, PAY.pxMax, paint_subgrid);
+                canvas.drawLine(pos, PAY.pxMin, pos, PAY.pxMax, p.paint_subgrid);
             }
             if ((style & 0x02) != 0) {
-                if (pos < PAX.pxMax-legendwidth/2)
-                    canvas.drawText(PAX.getString(val), pos, PAY.pxMin+fctr+fontspace,textX);
+                if (pos < PAX.pxMax-p.xLableWidth/2)
+                    canvas.drawText(PAX.getString(val), pos, PAY.pxMin+p.xAxisHeight,p.textX);
             }
         }
 
@@ -472,21 +523,21 @@ public class XYPlot extends View {
             float val=PAY.gridValues[i];
             if ((style & 0x01) != 0) {
                 // Major
-                canvas.drawLine(PAX.pxMin, pos,PAX.pxMax,pos, paint_grid);
+                canvas.drawLine(PAX.pxMin, pos,PAX.pxMax,pos, p.paint_grid);
             } else {
                 // Minor
-                canvas.drawLine(PAX.pxMin, pos,PAX.pxMax,pos, paint_subgrid);
+                canvas.drawLine(PAX.pxMin, pos,PAX.pxMax,pos, p.paint_subgrid);
             }
             if ((style & 0x02) != 0) {
-                if ((pos > fctr/2) && (pos < PAY.pxMin-fctr/2))
-                    canvas.drawText(AY.getString(val), ofsX - fontspace, pos + fctr / 2, textY);
+                if ((pos > PAY.pxMax+p.yLableHeight/2) && (pos < PAY.pxMin-p.yLableHeight/2))
+                    canvas.drawText(AY.getString(val), p.yAxisWidth-p.fontspace, pos + p.yLableHeight / 2, p.textY);
             }
         }
-        canvas.drawText(unit, PAX.pxMin+10, PAY.pxMax+fctr*2, paint_unit);
-        canvas.drawRect(PAX.pxMin-1,PAY.pxMax-1,PAX.pxMax+1,PAY.pxMin+1,paint_frame);
+        canvas.drawText(unit, PAX.pxMin+p.fontspace, PAY.pxMax+p.fontspace+p.yLableHeight, p.paint_unit);
+        canvas.drawRect(PAX.pxMin-1,PAY.pxMax-1,PAX.pxMax+1,PAY.pxMin+1,p.paint_frame);
     }
 
-    public RectF getRange(ArrayList<XYdata> xy, boolean logScaleX, boolean logScaleY) {
+    protected RectF getRange(ArrayList<XYdata> xy, boolean logScaleX, boolean logScaleY) {
         RectF r=new RectF();
         r.left=defaultxMin;
         r.right=defaultxMax;
@@ -529,13 +580,15 @@ public class XYPlot extends View {
         return r;
     }
 
-    public void drawToCanvas(Canvas canvas, ArrayList<XYdata> xy, boolean autoZoom) {
+    public void drawToCanvas(Canvas canvas, ArrayList<XYdata> xy, float fontsize, boolean autoZoom, boolean inverted) {
         PlotAxis QX=new PlotAxis(AX);
         PlotAxis QY=new PlotAxis(AY);
-        QX.pxMin=ofsX+1;
-        QX.pxMax=canvas.getWidth()-1;
-        QY.pxMin=canvas.getHeight()-2*(int)fctr-2;
-        QY.pxMax=ofsY+1;
+        PaintConfig p=new PaintConfig(fontsize,true,inverted); // Anti Alias on
+        if (inverted) canvas.drawARGB(255,255,255,255);
+        QX.pxMin=p.yAxisWidth+2;
+        QX.pxMax=canvas.getWidth()-2;
+        QY.pxMin=canvas.getHeight()-p.xAxisHeight-2;
+        QY.pxMax=2;
         if (autoZoom) {
             RectF r=getRange(xy,QX.logScale,QY.logScale);
             QX.aMin=r.left;
@@ -543,66 +596,74 @@ public class XYPlot extends View {
             QY.aMin=r.bottom;
             QY.aMax=r.top;
         }
-        drawGrid(canvas,QX,QY);
+        drawGrid(canvas,QX,QY,p);
 
         if ((xy == null) || (xy.size() < 1))
             return;
 
         canvas.clipRect(QX.pxMin,QY.pxMax,QX.pxMax,QY.pxMin);
-        for (XYdata l:xy) {
-            l.plot(canvas,QX,QY, displayOfs,displayScale);
+        if (p.antiAlias) {
+            for (XYdata l:xy)
+                l.pnt.setAntiAlias(true);
         }
+
+        // Draw Lines
+        for (XYdata l:xy)
+            l.plot(canvas,QX,QY, displayOfs,displayScale);
 
         // Legend
         int n=0;
         for (XYdata l:xy) {
-            canvas.drawText(l.name, QX.pxMax-10, QY.pxMax + 10 + 2 * fctr + fctr * 2 * n, l.pnt);
+            l.pnt.setTextSize(p.stdFontSize);
+            canvas.drawText(l.name, QX.pxMax-p.fontspace, QY.pxMax + p.fontspace + p.yLableHeight +
+                    p.yLableHeight * 2 * n, l.pnt);
             n++;
         }
+
+        if (!pc.antiAlias) {
+            for (XYdata l:xy)
+                l.pnt.setAntiAlias(false);
+        }
+
         canvas.clipRect(0, 0, canvas.getWidth() - 1, canvas.getHeight() - 1);
     }
 
     @Override
     public void onDraw(Canvas canvas) {
-        displayWidth=getWidth()-ofsX-2;
-        displayHeight=getHeight()-ofsY-2*(int)fctr-2;
-        AX.pxMin=ofsX;
-        AX.pxMax=ofsX+displayWidth;
-        AY.pxMin=ofsY+displayHeight;
-        AY.pxMax=ofsY;
+        //displayWidth=getWidth()-ofsX-2;
+        //displayHeight=getHeight()-ofsY-2*(int)fctr-2;
+        AX.pxMin=pc.yAxisWidth+2;
+        AX.pxMax=getWidth()-2;
+        AY.pxMin=getHeight()-pc.xAxisHeight-2;
+        AY.pxMax=2;
 
-        drawGrid(canvas,AX,AY);
+        drawGrid(canvas,AX,AY,pc);
         // canvas.drawRect(ofsX-1,ofsY-1,ofsX+displayWidth+1,ofsY+displayHeight-1,paint_frame);
 
         if (lines == null) return;
 
-        canvas.clipRect(ofsX,ofsY,ofsX+displayWidth-1,ofsY+displayHeight-1);
+        canvas.clipRect(AX.pxMin,AY.pxMax,AX.pxMax,AY.pxMin);
 
         if (displayOnlyOne) {
             if ((displayOne>=0) && (displayOne < lines.size())) {
                 lines.get(displayOne).plot(canvas, AX,AY, displayOfs, displayScale);
             }
         } else {
-            for (int i = 0; i < lines.size(); i++)
-                lines.get(i).plot(canvas, AX,AY, displayOfs, displayScale);
+            for (XYdata l:lines)
+                l.plot(canvas, AX,AY, displayOfs, displayScale);
 
             // Legend
             int n = 0;
-            for (int i = 0; i < lines.size(); i++)
-                if (!lines.get(i).hidden) {
-                    canvas.drawText(lines.get(i).name, ofsX + displayWidth - 10, ofsY + 2 * fctr + fctr * 2 * n, lines.get(i).pnt);
+            for (XYdata l:lines)
+                if (!l.hidden) {
+                    l.pnt.setTextSize(pc.stdFontSize);
+                    canvas.drawText(l.name, AX.pxMax-pc.fontspace, AY.pxMax + pc.fontspace + pc.yLableHeight +
+                            pc.yLableHeight * 2 * n, l.pnt);
                     n++;
                 }
         }
         canvas.clipRect(0, 0, getWidth() - 1, getHeight() - 1);
-
     }
-
-/*    public XYdata addPlot() {
-        Calendar cal = Calendar.getInstance();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return addPlot(sdf.format(cal.getTime()));
-    }*/
 
     public XYdata addPlot(String name) {
         if (name == null) name="undefined";

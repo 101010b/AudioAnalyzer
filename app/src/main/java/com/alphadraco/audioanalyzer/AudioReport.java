@@ -6,12 +6,16 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.widget.RelativeLayout;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -66,71 +70,131 @@ public class AudioReport {
         fileOutputStream.write(string.getBytes());
     }
 
+    public boolean copyResourceToFile(File file, Context ctx, int resourceID) {
+        try {
+            InputStream in = ctx.getResources().openRawResource(resourceID);
+            FileOutputStream af = new FileOutputStream(file);
+            byte [] buf= new byte[1024];
+            boolean eof=false;
+            while (!eof) {
+                int l=in.read(buf,0,1024);
+                if (l > 0) {
+                    af.write(buf,0,l);
+                } else
+                    eof=true;
+            }
+            af.close();
+            in.close();
+            MediaScannerConnection.scanFile(ctx, new String[] { file.getAbsolutePath() }, null, null);
+        } catch (IOException e) {
+            return false;
+        }
+        return true;
+    }
+
     public boolean saveFiles(AudioAnalyzer ctx, File basedir) {
-        File logoFile=new File(basedir,"logo.png");
+        File logoFile=new File(basedir,"icon.png");
+        File qrFile=new File(basedir,"qrcode.png");
         File rootFile=new File(basedir,"index.html");
         File specFile=new File(basedir,"spec.png");
         File waveFile=new File(basedir,"wave.png");
         File audioFile=new File(basedir,"audio.wav");
         try {
+            // HTML File
             FileOutputStream html = new FileOutputStream(rootFile);
             txtwrite(html,"<html><head>\n");
+
             txtwrite(html,"<title>Audio Analyzer Report " + name + "</title>\n");
-            txtwrite(html,"</head><body bgcolor=\"#000000\" text=\"#FFFFFF\" link=\"#00FF00\" alink=\"#00FF00\" text=\"#008000\">\n");
-            txtwrite(html,"<h1><img src=\"logo.png\">AudioAnalyzer " + name + "</h1>\n");
-            txtwrite(html,"<h2>Overview</h2>");
+            txtwrite(html,"</head>\n");
+            txtwrite(html,"<body>\n"); //  bgcolor=\"#000000\" text=\"#FFFFFF\" link=\"#00FF00\" alink=\"#00FF00\" text=\"#008000\">\n");
+
+            txtwrite(html,"<table border=\"1\" frame=\"box\" rules=\"rows\">\n");
+            txtwrite(html,"<tr><td><img src=\"icon.png\"></td>\n");
+            txtwrite(html,"<td width=\"100%\" align=\"center\"><h1>AudioAnalyzer Report</h1><br>" + name + "</td>\n");
+            txtwrite(html,"<td><a border=\"0\" href=\"" + ctx.getString(R.string.googlePlayLink) + "\">");
+            txtwrite(html,"<img src=\"qrcode.png\"></a></td></tr>");
+
+            txtwrite(html,"<tr><td colspan=\"3\">");
+            txtwrite(html,"<h2>Parameters</h2>\n");
             txtwrite(html,"<table border=0>\n");
             txtwrite(html,"<tr><td>Record Date</td><td>" + dateString() + "</td></tr>\n");
             txtwrite(html,"<tr><td>Record Length</td><td>" + lengthString() + "</td></tr>\n");
             txtwrite(html,"<tr><td>Samples</td><td>" + String.format("%d",samples) + "</td></tr>\n");
             txtwrite(html,"<tr><td>Samplerate</td><td>" + String.format("%1.0f",samplerate) + " Hz</td></tr>\n");
             txtwrite(html,"</table>\n");
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\">");
             txtwrite(html,"<h2>Spectrum</h2>\n");
             txtwrite(html,"<img src=\"spec.png\"><br>\n");
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\">");
             txtwrite(html,"<h2>Wave</h2>\n");
             txtwrite(html,"<img src=\"wave.png\"><br>\n");
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\">");
             txtwrite(html,"<h2>Levels</h2>\n");
             txtwrite(html,"<table border=\"0\">\n");
-            txtwrite(html,"<tr><th>Name</th>");
+            txtwrite(html,"<tr><th align=\"left\">Name</th>");
+            txtwrite(html,"<th align=\"right\">"+ctx.getCalNote(calMode) + "</th><th width=\"50\"></th>");
             for (int j=0;j<ctx.getCalModes();j++) {
-                if (calMode==j)
-                    txtwrite(html,"<th bgcolor=\"#300000\">"+ctx.getCalNote(j)+"</i></th>");
-                else
-                    txtwrite(html,"<th>"+ctx.getCalNote(j)+"</th>");
+                if (calMode!=j)
+                    txtwrite(html,"<th align=\"right\">"+ctx.getCalNote(j)+"</th>");
             }
             txtwrite(html,"</tr>\n");
-            txtwrite(html,"<tr><th></th>");
+
+            txtwrite(html,"<tr><th align=\"right\">Unit</th>");
+            txtwrite(html,"<th align=\"right\">" + ctx.getUnit(calMode) + "</th><th></th>");
             for (int j=0;j<ctx.getCalModes();j++) {
-                if (calMode==j)
-                    txtwrite(html,"<th bgcolor=\"#300000\">"+ctx.getUnit(j)+"</th>");
-                else
-                    txtwrite(html,"<th>"+ctx.getUnit(j)+"</th>");
+                if (calMode!=j)
+                    txtwrite(html,"<th  align=\"right\">"+ctx.getUnit(j)+"</th>");
             }
             txtwrite(html,"</tr>\n");
+
             for (int i=0;i<energy_names.length;i++) {
-                txtwrite(html,"<tr><td>" + energy_names[i] + "</td>");
+                txtwrite(html,"<tr><td><b>" + energy_names[i] + "</b></td>");
+                txtwrite(html,"<td align=\"right\">"+String.format("%1.2f",energies[i]+ctx.getCalOfs(calMode)) + "</td><td></td>" );
                 for (int j=0;j<ctx.getCalModes();j++)
-                    txtwrite(html,"<td>"+String.format("%1.2f",energies[i]+ctx.getCalOfs(j)) + "</td>");
+                    if (calMode != j)
+                        txtwrite(html,"<td align=\"right\">"+String.format("%1.2f",energies[i]+ctx.getCalOfs(j)) + "</td>");
                 txtwrite(html,"</tr>\n");
             }
             txtwrite(html,"</table>\n");
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\">");
             txtwrite(html,"<h2>WAV File</h2>\n");
             txtwrite(html,"<a href=\"audio.wav\">WAV File</a><br>\n");
-            txtwrite(html,"<hr>");
-            txtwrite(html,"AudioAnalyzer " + ctx.getVersion() + "<br>\n");
-            txtwrite(html,ctx.getString(R.string.reportFooterText));
-            html.write("</body></html>\n".getBytes());
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\" align=\"center\">\n");
+            txtwrite(html,"<a href=\"" + ctx.getString(R.string.googlePlayLink) + "\">" +
+                    "AudioAnalyzer " + ctx.getVersion() + "</a>\n");
+            txtwrite(html,"</td></tr>\n");
+
+            txtwrite(html,"<tr><td colspan=\"3\" align=\"center\">\n");
+            txtwrite(html,ctx.getString(R.string.reportFooterText) + "\n");
+            txtwrite(html,"</td></tr>\n");
+            txtwrite(html,"</table\n");
+            txtwrite(html,"</body></html>\n");
             html.close();
             MediaScannerConnection.scanFile(ctx, new String[] { rootFile.getAbsolutePath() }, null, null);
         } catch (IOException e) {
             return false;
         }
+
+        // Spectrum Plot
         try {
             ArrayList<XYdata> thisone = new ArrayList<XYdata>();
             thisone.add(specPlot);
             Bitmap bspec=Bitmap.createBitmap(800,600, Bitmap.Config.ARGB_8888);
             Canvas canvas=new Canvas(bspec);
-            ctx.rp_view.drawToCanvas(canvas,thisone,true);
+            int colbup=specPlot.color;
+            specPlot.color= Color.argb(255,255,0,0);
+            ctx.rp_view.drawToCanvas(canvas,thisone,15.0f,true,true);
+            specPlot.color=colbup;
             FileOutputStream spec=new FileOutputStream(specFile);
             bspec.compress(Bitmap.CompressFormat.PNG,100,spec);
             spec.close();
@@ -138,12 +202,17 @@ public class AudioReport {
         } catch (IOException e) {
             return false;
         }
+
+        // Wave Plot
         try {
             ArrayList<XYdata> thisone = new ArrayList<XYdata>();
             thisone.add(wavePlot);
             Bitmap bspec=Bitmap.createBitmap(800,400, Bitmap.Config.ARGB_8888);
             Canvas canvas=new Canvas(bspec);
-            ctx.rp_wave_view.drawToCanvas(canvas,thisone,true);
+            int colbup=wavePlot.color;
+            wavePlot.color= Color.argb(255,255,0,0);
+            ctx.rp_wave_view.drawToCanvas(canvas,thisone,15.0f,true,true);
+            wavePlot.color=colbup;
             FileOutputStream spec=new FileOutputStream(waveFile);
             bspec.compress(Bitmap.CompressFormat.PNG,100,spec);
             spec.close();
@@ -151,6 +220,8 @@ public class AudioReport {
         } catch (IOException e) {
             return false;
         }
+
+        // Wav File
         try {
             byte[] header=new byte[128];
             int headsize=ctx.audioAnalyzerHelper.SignalWavHeader(header,samples);
@@ -170,15 +241,10 @@ public class AudioReport {
         } catch (IOException e) {
             return false;
         }
-        try {
-            FileOutputStream af= new FileOutputStream(logoFile);
-            Bitmap b= BitmapFactory.decodeResource(ctx.getResources(),R.mipmap.ic_launcher);
-            b.compress(Bitmap.CompressFormat.PNG,100,af);
-            af.close();
-            MediaScannerConnection.scanFile(ctx, new String[] { logoFile.getAbsolutePath() }, null, null);
-        } catch (IOException e) {
-            return false;
-        }
+
+        // Aux Files
+        copyResourceToFile(logoFile, ctx, R.raw.icon);
+        copyResourceToFile(qrFile, ctx, R.raw.qrcode);
 
         return true;
     }

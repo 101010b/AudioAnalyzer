@@ -221,7 +221,10 @@ public class XYdata {
             canvas.drawLines(pointcacheminmax, maxPoints*4, points * 4, pnt);
         }
         pnt.setColor(color);
-        pnt.setStrokeWidth(3.0f);
+        if (useminmax)
+            pnt.setStrokeWidth(3.0f);
+        else
+            pnt.setStrokeWidth(1.0f);
         canvas.drawLines(pointcache, 0, points*4, pnt);
         pnt.setStyle(Paint.Style.FILL);
     }
