@@ -669,7 +669,8 @@ public class XYPlot extends View {
         if (name == null) name="undefined";
         if (lines==null)
             lines=new ArrayList<XYdata>();
-        XYdata xydata=new XYdata(this, name, lines.size(), getColor(lines.size()) ,64);
+        float stdsize = new Button(root).getTextSize();
+        XYdata xydata=new XYdata(0.75f*stdsize, name, lines.size(), getColor(lines.size()) ,64);
         lines.add(xydata);
         return xydata;
     }

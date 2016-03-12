@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="General"
+        android:key="AudioAnalyzerGeneralSettings">
+        <com.alphadraco.audioanalyzer.ADEditTextPreference
+        android:defaultValue="My Device"
+        android:dialogTitle="This Devices Name"
+        android:inputType="text"
+        android:key="DeviceName"
+        android:summary="Use '%s' as Device Name"
+        android:title="This Devices Name" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="FFT Processing"
         android:key="AudioAnalyzerFFTSettings">
         <ListPreference android:title="FFT Size" android:key="FFTSize"

@@ -1,10 +1,18 @@
 package com.alphadraco.audioanalyzer;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
+
 /**
  * Created by aladin on 20.09.2015.
  */
 public class ProcessResult {
-    // Orghanisation
+    // Organisation
     int serial=0;
 
     // Input Data
@@ -44,6 +52,131 @@ public class ProcessResult {
         reuse=false;
         empty=true;
         memlen=-1;
+    }
+
+    public float[] readArrayFloat(DataInputStream dataInputStream) throws IOException {
+        int len=dataInputStream.readInt();
+        if (len < 0) {
+            return null;
+        }
+        ByteBuffer bb=ByteBuffer.allocate(len*4);
+        byte [] bu=bb.array();
+        dataInputStream.read(bu);
+        float [] reta = new float[len];
+        for (int i=0;i<len;i++) reta[i]=bb.getFloat();
+        // for (float f:reta) f=bb.getFloat();
+        return reta;
+    }
+
+    public short[] readArrayShort(DataInputStream dataInputStream) throws IOException {
+        int len=dataInputStream.readInt();
+        if (len < 0) {
+            return null;
+        }
+        ByteBuffer bb=ByteBuffer.allocate(len*2);
+        byte [] bu=bb.array();
+        dataInputStream.read(bu);
+        short [] reta=new short[len];
+        for (int i=0;i<len;i++) reta[i]=bb.getShort();
+        // for (short s:reta) s=bb.getShort();
+        return reta;
+    }
+
+    public ProcessResult(DataInputStream dataInputStream) throws IOException {
+        String signature=dataInputStream.readUTF();
+        if (!signature.equals("ARES0"))
+            throw new IOException("Bad File Format: Bad Signature");
+        serial=dataInputStream.readInt();
+        len=dataInputStream.readInt();
+        wave=readArrayShort(dataInputStream);
+        fs=dataInputStream.readFloat();
+        memlen=len;
+        window=dataInputStream.readInt();
+        terzw=dataInputStream.readInt();
+
+        processed=dataInputStream.readBoolean();
+        empty=dataInputStream.readBoolean();
+        trackf=dataInputStream.readFloat();
+
+        window_amplitude_corr=dataInputStream.readFloat();
+        window_noise_corr=dataInputStream.readFloat();
+        pkmax=dataInputStream.readFloat();
+        trackLevel=dataInputStream.readFloat();
+        trackLevel2=dataInputStream.readFloat();
+
+        fres=readArrayFloat(dataInputStream);
+        f=readArrayFloat(dataInputStream);
+        y=readArrayFloat(dataInputStream);
+        yavg=readArrayFloat(dataInputStream);
+        ypeak=readArrayFloat(dataInputStream);
+
+        terzf=readArrayFloat(dataInputStream);
+        terze=readArrayFloat(dataInputStream);
+        terzeavg=readArrayFloat(dataInputStream);
+        terzepeak=readArrayFloat(dataInputStream);
+
+        reuse=false;
+    }
+
+    public void writeArray(DataOutputStream dataOutputStream, float [] fa) throws IOException {
+        if (fa==null) {
+            dataOutputStream.writeInt(-1);
+            return;
+        }
+        dataOutputStream.writeInt(fa.length);
+        ByteBuffer bb=ByteBuffer.allocate(fa.length*4);
+        for (float f:fa) bb.putFloat(f);
+        /*FloatBuffer fb=bb.asFloatBuffer();
+        System.arraycopy(fa,0,fb.array(),0,fa.length);*/
+        dataOutputStream.write(bb.array());
+        //for (float q:fa)
+        //    dataOutputStream.writeFloat(q);
+    }
+
+    public void writeArray(DataOutputStream dataOutputStream, short [] fa) throws IOException {
+        if (fa==null) {
+            dataOutputStream.writeInt(-1);
+            return;
+        }
+        dataOutputStream.writeInt(fa.length);
+        ByteBuffer bb=ByteBuffer.allocate(fa.length*2);
+        for (short s:fa) bb.putShort(s);
+        /*ShortBuffer sb=bb.asShortBuffer();
+        System.arraycopy(fa,0,sb.array(),0,fa.length);*/
+        dataOutputStream.write(bb.array());
+        //for (short q:fa)
+        //    dataOutputStream.writeShort(q);
+    }
+
+
+    public void store(DataOutputStream dataOutputStream) throws IOException {
+        String signature = "ARES0";
+        dataOutputStream.writeUTF(signature);
+        dataOutputStream.writeInt(serial);
+        dataOutputStream.writeInt(len);
+        writeArray(dataOutputStream,wave);
+        dataOutputStream.writeFloat(fs);
+        dataOutputStream.writeInt(window);
+        dataOutputStream.writeInt(terzw);
+        dataOutputStream.writeBoolean(processed);
+        dataOutputStream.writeBoolean(empty);
+        dataOutputStream.writeFloat(trackf);
+        dataOutputStream.writeFloat(window_amplitude_corr);
+        dataOutputStream.writeFloat(window_noise_corr);
+        dataOutputStream.writeFloat(pkmax);
+        dataOutputStream.writeFloat(trackLevel);
+        dataOutputStream.writeFloat(trackLevel2);
+
+        writeArray(dataOutputStream,fres);
+        writeArray(dataOutputStream,f);
+        writeArray(dataOutputStream,y);
+        writeArray(dataOutputStream,yavg);
+        writeArray(dataOutputStream,ypeak);
+        writeArray(dataOutputStream,terzf);
+        writeArray(dataOutputStream,terze);
+        writeArray(dataOutputStream,terzeavg);
+        writeArray(dataOutputStream,terzepeak);
+
     }
 
     public ProcessResult duplicate() {

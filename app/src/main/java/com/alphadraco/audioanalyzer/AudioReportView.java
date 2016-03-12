@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.provider.ContactsContract;
 import android.text.Html;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -28,6 +29,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
 
 public class AudioReportView extends XYPlot {
@@ -36,6 +38,7 @@ public class AudioReportView extends XYPlot {
     public ArrayList<View> ListEntries;
     public ListView lv;
     public AudioWaveView wv;
+    public ImageButton playingButton=null;
 
     private class ReportAdaptor extends ArrayAdapter<AudioReport> {
         private final Context context;
@@ -47,33 +50,72 @@ public class AudioReportView extends XYPlot {
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, final ViewGroup parent) {
             LayoutInflater inflater = (LayoutInflater) context
                     .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            View rowView = inflater.inflate(R.layout.audio_report_item, parent, false);
+            final View rowView = inflater.inflate(R.layout.audio_report_item, parent, false);
+
             TextView header=(TextView)rowView.findViewById(R.id.tx_rp_header);
             TextView desc=(TextView)rowView.findViewById(R.id.tx_rp_desc);
-            CheckBox shown=(CheckBox)rowView.findViewById(R.id.cb_rp_shown);
-            header.setText(ar.get(position).name);
-            header.setTextColor(lines.get(position).color);
+            ImageButton shown=(ImageButton) rowView.findViewById(R.id.bn_rp_view);
+            ImageButton persist=(ImageButton) rowView.findViewById(R.id.bn_rp_persist);
+            final ImageButton play=(ImageButton) rowView.findViewById(R.id.bn_rp_play);
+
             while (ListEntries.size()<position+1)
                 ListEntries.add(null);
             ListEntries.set(position,rowView);
 
+            header.setText(ar.get(position).name);
+            header.setTextColor(lines.get(position).color);
             desc.setText(ar.get(position).description());
             if (ar.get(position).specPlot.hidden)
-                shown.setChecked(false);
+                shown.setImageResource(R.mipmap.noview);
             else
-                shown.setChecked(true);
+                shown.setImageResource(R.mipmap.view);
+
+            if (ar.get(position).persistant)
+                persist.setImageResource(R.mipmap.persist);
+            else
+                persist.setImageResource(R.mipmap.nopersist);
+
             final AudioReport arpointer=ar.get(position);
-            shown.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            persist.setOnClickListener(new OnClickListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (isChecked)
-                        arpointer.specPlot.hidden=false;
+                public void onClick(View v) {
+                    if (arpointer.persistant) {
+                        arpointer.setPersistant(root,false);
+                    } else {
+                        arpointer.setPersistant(root,true);
+                    }
+                    if (arpointer.persistant)
+                        ((ImageButton)v).setImageResource(R.mipmap.persist);
                     else
-                        arpointer.specPlot.hidden=true;
+                        ((ImageButton)v).setImageResource(R.mipmap.nopersist);
+                }
+            });
+            shown.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    arpointer.specPlot.hidden=!arpointer.specPlot.hidden;
+                    if (arpointer.specPlot.hidden)
+                        ((ImageButton)v).setImageResource(R.mipmap.noview);
+                    else
+                        ((ImageButton)v).setImageResource(R.mipmap.view);
                     root.rp_view.display();
+                }
+            });
+            play.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (root.audioPlayer == null) {
+                        if (playingButton != null)
+                            playingButton.setImageResource(R.mipmap.play_button);
+                        AudioPlayer ap=new AudioPlayer(arpointer.samples);
+                        for (ProcessResult pr:arpointer.data) ap.addBlock(pr.wave,pr.len);
+                        playingButton=(ImageButton) v;
+                        playingButton.setImageResource(R.mipmap.speaker_on);
+                        root.audioPlayer=ap;
+                    }
                 }
             });
             return rowView;
@@ -206,6 +248,24 @@ public class AudioReportView extends XYPlot {
         ((BaseAdapter) lv.getAdapter()).notifyDataSetChanged();
     }
 
+    public void readPersistantRecords() {
+        File dir=root.getFilesDir();
+        File [] files=dir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String filename) {
+                return filename.endsWith(".aaraw");
+            }
+        });
+        for (File f:files) {
+            // f.delete();
+            AudioReport ar=new AudioReport(this,wv);
+            if (ar.fetchPersistant(f)) {
+                add(ar);
+            }
+        }
+
+    }
+
     public void initWaveView(AudioWaveView _wv) {
         wv=_wv;
         wv.audioReportView=this;
@@ -230,7 +290,7 @@ public class AudioReportView extends XYPlot {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String newName=txe.getText().toString();
-                reports.get(saveid).setName(newName);
+                reports.get(saveid).setName(root,newName);
                 ((TextView)ListEntries.get(saveid).findViewById(R.id.tx_rp_header)).setText(newName);
                 ListEntries.get(saveid).invalidate();
                 invalidate();
@@ -355,6 +415,9 @@ public class AudioReportView extends XYPlot {
                                 break;
                             case 3: // Delete
                                 int idx=item.getGroupId();
+                                if (reports.get(idx).persistant) {
+                                    reports.get(idx).setPersistant(root,false);
+                                }
                                 reports.remove(idx);
                                 ListEntries.remove(idx);
                                 lines.remove(idx);

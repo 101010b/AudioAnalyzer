@@ -8,19 +8,28 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
+import android.widget.Button;
 import android.widget.RelativeLayout;
 
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.nio.FloatBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * Created by aladin on 22.11.2015.
@@ -28,8 +37,13 @@ import java.util.Date;
 public class AudioReport {
 
     // GUI Connection
+    private float txtSize;
     private AudioReportView viewer;
     private AudioWaveView waveViewer;
+
+
+    public boolean persistant=false;
+    private File persistantFile;
 
     // Stored Data
     public String name;
@@ -44,31 +58,172 @@ public class AudioReport {
     public float[] energies;
     public String[] energy_names;
     public int calMode;
+    public String deviceName;
 
-
-    public AudioReport(AudioReportView _viewer, AudioWaveView _waveViewer, String _name) {
+    public void setup(AudioReportView _viewer, AudioWaveView _waveViewer, String _name) {
         viewer = _viewer;
         waveViewer = _waveViewer;
         data=new ArrayList<ProcessResult>();
-        name=name;
+        name=_name;
         processed=false;
         energies=null;
         energy_names=null;
+        float stdsize = new Button(viewer.root).getTextSize();
+        txtSize=0.75f*stdsize;
+        deviceName=viewer.root.deviceName;
+    }
+
+    public AudioReport(AudioReportView _viewer, AudioWaveView _waveViewer, String _name) {
+        setup(_viewer,_waveViewer,_name);
     }
 
     public AudioReport(AudioReportView _viewer,  AudioWaveView _waveViewer) {
-        viewer = _viewer;
-        waveViewer = _waveViewer;
-        data=new ArrayList<ProcessResult>();
         Calendar cal = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
-        name=sdf.format(cal.getTime());
-        processed=false;
+        setup(_viewer,_waveViewer,sdf.format(cal.getTime()));
+    }
+
+    public void fetch(DataInputStream dataInputStream) throws IOException {
+        String signature=dataInputStream.readUTF();
+        if (!signature.equals("AREPO0"))
+            throw new IOException("Bad File Format: Signature Error");
+        name=dataInputStream.readUTF();
+        calMode=dataInputStream.readInt();
+        deviceName=dataInputStream.readUTF();
+        int size=dataInputStream.readInt();
+        data=new ArrayList<ProcessResult>(size);
+        for (int i=0;i<size;i++)
+            data.add(new ProcessResult(dataInputStream));
+        processed=dataInputStream.readBoolean();
+        if (processed) {
+            specPlot=new XYdata(txtSize, dataInputStream);
+            wavePlot=new XYdata(txtSize, dataInputStream);
+            recorded=new Date();
+            recorded.setTime(dataInputStream.readLong());
+            samples=dataInputStream.readInt();
+            samplerate=dataInputStream.readFloat();
+            int en=dataInputStream.readInt();
+            energies=new float[en];
+            energy_names=new String[en];
+            for (int i=0;i<en;i++)
+                energies[i]=dataInputStream.readFloat();
+            for (int i=0;i<en;i++)
+                energy_names[i]=dataInputStream.readUTF();
+        }
+    }
+
+    public void store(DataOutputStream dataOutputStream) throws IOException {
+        String signature = "AREPO0";
+        dataOutputStream.writeUTF(signature);
+        dataOutputStream.writeUTF(name);
+        dataOutputStream.writeInt(calMode);
+        dataOutputStream.writeUTF(deviceName);
+        dataOutputStream.writeInt(data.size());
+        for (ProcessResult pr:data)
+            pr.store(dataOutputStream);
+        dataOutputStream.writeBoolean(processed);
+        if (processed) {
+            specPlot.store(dataOutputStream);
+            wavePlot.store(dataOutputStream);
+            dataOutputStream.writeLong(recorded.getTime());
+            dataOutputStream.writeInt(samples);
+            dataOutputStream.writeFloat(samplerate);
+            dataOutputStream.writeInt(energies.length);
+            for (float f : energies)
+                dataOutputStream.writeFloat(f);
+            for (String s : energy_names)
+                dataOutputStream.writeUTF(s);
+        }
+    }
+
+    public boolean store(Context ctx, File file) {
+        try {
+            // BufferedOutputStream bufferedOutputStream=new BufferedOutputStream(new FileOutputStream(file));
+            // DataOutputStream dataOutputStream=new DataOutputStream(bufferedOutputStream);
+            DataOutputStream dataOutputStream=new DataOutputStream(new FileOutputStream(file));
+            store(dataOutputStream);
+            dataOutputStream.close();
+        } catch (IOException e) {
+            return false;
+        }
+        if (ctx != null)
+            MediaScannerConnection.scanFile(ctx, new String[] { file.getAbsolutePath() }, null, null);
+        return true;
+    }
+
+    public boolean store(File file) {
+        return store(null,file);
+    }
+
+    public boolean fetch(File file) {
+        try {
+            DataInputStream dataInputStream=new DataInputStream(new FileInputStream(file));
+            fetch(dataInputStream);
+            dataInputStream.close();
+        } catch (IOException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean fetchPersistant(File file) {
+        if (fetch(file)) {
+            persistant = true;
+            persistantFile = file;
+            return true;
+        }
+        return false;
+    }
+
+    protected String tempName() {
+        String t="";
+        Random random=new Random();
+        for (int i=0;i<8;i++) {
+            int rndchar=random.nextInt(36);
+            if (rndchar < 26)
+                t+=(char) (rndchar+ 'a');
+            else
+                t+=(char) (rndchar-26+'0');
+        }
+        return t;
+    }
+
+    protected File getTempFile(Context ctx, String ext) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+        String prefix=sdf.format(Calendar.getInstance().getTime());
+        int trys=0;
+        while (trys < 10) {
+            File f=new File(ctx.getFilesDir(),prefix+tempName()+ext);
+            if (!f.exists())
+                return f;
+            trys++;
+        }
+        return null; // Not possible
+    }
+
+    public void setPersistant(Context ctx, boolean _persistant) {
+        if (_persistant == persistant) return;
+        if (!persistant) {
+            // Store File
+            File f=getTempFile(ctx,".aaraw");
+            if (f == null)
+                return;
+            if (store(f)) {
+                // Success
+                persistantFile=f;
+                persistant=true;
+            }
+        } else {
+            // Remove persistance
+            persistantFile.delete();
+            persistant=false;
+        }
     }
 
     private void txtwrite(FileOutputStream fileOutputStream, String string) throws IOException {
         fileOutputStream.write(string.getBytes());
     }
+
 
     public boolean copyResourceToFile(File file, Context ctx, int resourceID) {
         try {
@@ -99,6 +254,7 @@ public class AudioReport {
         File specFile=new File(basedir,"spec.png");
         File waveFile=new File(basedir,"wave.png");
         File audioFile=new File(basedir,"audio.wav");
+        File rawFile=new File(basedir,"recording.aaraw");
         try {
             // HTML File
             FileOutputStream html = new FileOutputStream(rootFile);
@@ -117,6 +273,7 @@ public class AudioReport {
             txtwrite(html,"<tr><td colspan=\"3\">");
             txtwrite(html,"<h2>Parameters</h2>\n");
             txtwrite(html,"<table border=0>\n");
+            txtwrite(html,"<tr><td>Record Device</td><td>" + deviceName + "</td></tr>\n");
             txtwrite(html,"<tr><td>Record Date</td><td>" + dateString() + "</td></tr>\n");
             txtwrite(html,"<tr><td>Record Length</td><td>" + lengthString() + "</td></tr>\n");
             txtwrite(html,"<tr><td>Samples</td><td>" + String.format("%d",samples) + "</td></tr>\n");
@@ -242,6 +399,9 @@ public class AudioReport {
             return false;
         }
 
+        // Raw Data
+        // store(ctx,rawFile);
+
         // Aux Files
         copyResourceToFile(logoFile, ctx, R.raw.icon);
         copyResourceToFile(qrFile, ctx, R.raw.qrcode);
@@ -271,7 +431,7 @@ public class AudioReport {
 
     public void process() {
         if (data.size() < 1) return; // Nothing to do...
-        specPlot =new XYdata(viewer);
+        specPlot =new XYdata(txtSize,viewer.getNextColor());
         specPlot.name=name;
         ProcessResult pr=data.get(0);
         specPlot.add(pr.f,pr.y,pr.len/2);
@@ -310,7 +470,7 @@ public class AudioReport {
             energies[i]=(float)10.0*(float)Math.log10(energies[i]/(float)data.size());
 
         // Wave Plot
-        wavePlot =new XYdata(waveViewer);
+        wavePlot =new XYdata(txtSize,waveViewer.getNextColor());
         wavePlot.name=name;
         wavePlot.color= specPlot.color;
         float t=-rectime/2;
@@ -327,10 +487,13 @@ public class AudioReport {
         processed=true;
     }
 
-    public void setName(String _name) {
+    public void setName(Context ctx,String _name) {
         name=_name;
         wavePlot.name=_name;
         specPlot.name=_name;
+        if (persistant) {
+            store(ctx,persistantFile);
+        }
     }
 
     public String description() {

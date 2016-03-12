@@ -7,6 +7,13 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.widget.Button;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -19,7 +26,6 @@ public class XYdata {
     public int index;
     public int color;
     public boolean hidden;
-    // public XYPlot plotview;
 
     public int maxPoints;
     public int points;
@@ -34,8 +40,9 @@ public class XYdata {
     private float[] pointcacheminmax;
 
     public Paint pnt;
+    public float txtSize;
 
-    private void setup(XYPlot vw, String _name, int _index, int _color, int _maxPoints) {
+    private void setup(float _txtSize, String _name, int _index, int _color, int _maxPoints) {
         name=_name;
         index=_index;
         color=_color;
@@ -56,30 +63,138 @@ public class XYdata {
             X=Y=null;
         }
 
+        txtSize=_txtSize;
         pnt=new Paint();
         pnt.setColor(color);
         pnt.setStyle(Paint.Style.FILL);
         pnt.setTextAlign(Paint.Align.RIGHT);
-        float stdsize = new Button(vw.root).getTextSize();
-        pnt.setTextSize(0.75f*stdsize);
+        pnt.setTextSize(txtSize);
     }
 
-    public XYdata(XYPlot vw, String _name, int _index, int _color, int _maxPoints) {
-        setup(vw,_name,_index,_color,_maxPoints);
+    public XYdata(float _txtSize, String _name, int _index, int _color, int _maxPoints) {
+        setup(_txtSize,_name,_index,_color,_maxPoints);
     }
 
-    public XYdata(XYPlot vw, String _name, int _index, int _color) {
-        setup(vw,_name,_index,_color,0);
+    public XYdata(float _txtSize, String _name, int _index, int _color) {
+        setup(_txtSize,_name,_index,_color,0);
     }
 
-    public XYdata(XYPlot vw, String _name) {
-        setup(vw,name,-1,vw.getNextColor(),0);
+    public XYdata(float _txtSize, String _name, int _color) {
+        setup(_txtSize,name,-1,_color,0);
     }
 
-    public XYdata(XYPlot vw) {
+    public XYdata(float _txtSize, int _color) {
         Calendar cal = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        setup(vw,sdf.format(cal.getTime()),-1,vw.getNextColor(),0);
+        setup(_txtSize,sdf.format(cal.getTime()),-1,_color,0);
+    }
+
+    public void writeArray(DataOutputStream dataOutputStream, float [] fa) throws IOException {
+        if (fa==null) {
+            dataOutputStream.writeInt(-1);
+            return;
+        }
+        dataOutputStream.writeInt(fa.length);
+        ByteBuffer bb=ByteBuffer.allocate(fa.length*4);
+        for (float f:fa) bb.putFloat(f);
+        dataOutputStream.write(bb.array());
+    }
+
+    public float[] readArrayFloat(DataInputStream dataInputStream) throws IOException {
+        int len=dataInputStream.readInt();
+        if (len < 0) {
+            return null;
+        }
+        ByteBuffer bb=ByteBuffer.allocate(len*4);
+        byte [] bu=bb.array();
+        dataInputStream.read(bu);
+        float [] reta = new float[len];
+        for (int i=0;i<len;i++) reta[i]=bb.getFloat();
+        //for (float f:reta) f=bb.getFloat();
+        return reta;
+    }
+
+
+    public void store(DataOutputStream dataOutputStream) throws IOException {
+        String signature = "XYDATA0";
+        dataOutputStream.writeUTF(signature);
+        dataOutputStream.writeUTF(name);
+        dataOutputStream.writeInt(color);
+        dataOutputStream.writeBoolean(hidden);
+        dataOutputStream.writeBoolean(useminmax);
+
+        dataOutputStream.writeInt(points);
+        writeArray(dataOutputStream,X);
+        writeArray(dataOutputStream,Y);
+        /*for (int i=0;i<points;i++)
+            dataOutputStream.writeFloat(X[i]);
+        for (int i=0;i<points;i++)
+            dataOutputStream.writeFloat(Y[i]);
+        */
+        if (useminmax) {
+            writeArray(dataOutputStream,Ymin);
+            writeArray(dataOutputStream,Ymax);
+            /*
+            for (int i=0;i<points;i++)
+                dataOutputStream.writeFloat(Ymin[i]);
+            for (int i=0;i<points;i++)
+                dataOutputStream.writeFloat(Ymax[i]);
+            */
+        }
+    }
+
+    public XYdata(float _txtSize, DataInputStream dataInputStream) throws IOException {
+        String signature = dataInputStream.readUTF();
+        if (!signature.equals("XYDATA0"))
+            throw new IOException("Bad File Format - Signature not found");
+        name=dataInputStream.readUTF();
+        index=0;
+        color=dataInputStream.readInt();
+        hidden=dataInputStream.readBoolean();
+        useminmax=dataInputStream.readBoolean();
+
+        points=dataInputStream.readInt();
+        maxPoints=0;
+        if (points < 0)
+            throw new IOException("Bad File Format - Points < 0");
+
+        if (points > 0) {
+            maxPoints = points;
+            X=readArrayFloat(dataInputStream);
+            Y=readArrayFloat(dataInputStream);
+            if (useminmax) {
+                Ymin=readArrayFloat(dataInputStream);
+                Ymax=readArrayFloat(dataInputStream);
+            }
+            /*
+            X = new float[maxPoints];
+            Y = new float[maxPoints];
+            if (useminmax) {
+                Ymin = new float[maxPoints];
+                Ymax = new float[maxPoints];
+            }
+            for (int i = 0; i < points; i++)
+                X[i] = dataInputStream.readFloat();
+            for (int i = 0; i < points; i++)
+                Y[i] = dataInputStream.readFloat();
+            if (useminmax) {
+                for (int i = 0; i < points; i++)
+                    Ymin[i] = dataInputStream.readFloat();
+                for (int i = 0; i < points; i++)
+                    Ymax[i] = dataInputStream.readFloat();
+            }
+            */
+        }
+
+        pointcache=null;
+        pointcacheminmax=null;
+
+        txtSize=_txtSize;
+        pnt=new Paint();
+        pnt.setColor(color);
+        pnt.setStyle(Paint.Style.FILL);
+        pnt.setTextAlign(Paint.Align.RIGHT);
+        pnt.setTextSize(txtSize);
     }
 
     public RectF getRange() {

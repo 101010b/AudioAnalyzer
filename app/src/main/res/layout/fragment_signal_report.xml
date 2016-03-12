@@ -23,15 +23,6 @@
             android:background="@android:color/black">
 
             <ImageButton
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:id="@+id/bn_rp_setup"
-                android:padding="0dp"
-                android:background="@android:color/black"
-                android:src="@mipmap/menu_button"
-                android:scaleType="fitXY" />
-
-            <ImageButton
                 android:layout_width="40dip"
                 android:layout_height="40dip"
                 android:id="@+id/bn_rp_cal"
